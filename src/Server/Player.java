@@ -102,7 +102,7 @@ public class Player { // 플레이어의 정보가 담긴 클래스
                 } else {
                     if (command.startsWith("/bet")) command = null;
                     else if (command.startsWith("/call")) {
-                        result = bet.call(basicBet - currentBet); // 전 사람의 배팅금 - 나의 배팅금
+                        result = bet.call(basicBet - currentBet); // 전 사람의 배팅금 - 현 배팅금
                         if (!result) command = null;
                         else break;
                     } else if (command.startsWith("/raise")) {

@@ -49,17 +49,17 @@ public class Bet { // 배팅 방식
             player.sendMessage("Minimum raise is >> " + minimumRaise);
             return false;
         }
-        if (raiseMoney + currentBet > player.getMoney()) { // 배팅금 > 소지금
+        if (raiseMoney > player.getMoney()) { // 배팅금 > 소지금
             player.sendMessage("Not Enough Money!!");
             return false;
-        } else if (raiseMoney + currentBet == player.getMoney()) { // 배팅금 = 소지금 -> 올인
+        } else if (raiseMoney == player.getMoney()) { // 배팅금 = 소지금 -> 올인
             player.sendMessage("Your Money is All In");
             return allIn();
         }
         if (raiseMoney + currentBet < basicBet) { // 전체 배팅금 < 기본 배팅금
-            player.sendMessage("Your Minimum Bet >> " + basicBet);
+            player.sendMessage("Minimum Betting >> " + basicBet);
             return false;
-        } else if (raiseMoney + currentBet == basicBet) { // 전체 배당금 == 기본 배당금 -> 콜
+        } else if (raiseMoney + currentBet == basicBet) { // 전체 배팅금 == 기본 배팅금 -> 콜
             player.sendMessage("Call Is Execution!");
             return call(raiseMoney);
         }

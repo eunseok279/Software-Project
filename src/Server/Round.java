@@ -52,10 +52,11 @@ public class Round {
     public int playRound(int currentPlayerIndex) {
         int turn = 0;
         if (!checkFolds(players)) return -1;
+        Pot mainPot = pots.get(0);
         while (turn < players.size()) {
             currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
             Player currentPlayer = players.get(currentPlayerIndex);
-            int betting = currentPlayer.getCurrentBet();
+
 
             currentPlayer.sendMessage("Your Turn");
             currentPlayer.sendMessage("Current Minimum Bet >> " + basicBet);
@@ -63,18 +64,19 @@ public class Round {
             if (roundFirst) {
                 currentPlayer.takeTurn(0);
             } else {
-                currentPlayer.sendMessage("Minimum Raise >> " + (2 * basicBet - betting));
+                currentPlayer.sendMessage("Minimum Raise >> " + (2 * basicBet - currentPlayer.getCurrentBet()));
                 currentPlayer.takeTurn(basicBet);
             }
 
-            if (currentPlayer.getState() == Player.State.FOLD) pots.get(0).plusPot(betting);
+            int betting = currentPlayer.getCurrentBet();
+            if (currentPlayer.getState() == Player.State.FOLD) mainPot.plusPot(betting);
             else if (currentPlayer.getState() == Player.State.ALLIN)
                 createSubPot(currentPlayerIndex);
             else if (currentPlayer.getState() == Player.State.RAISE) {
-                pots.get(0).plusPot(betting);
+                mainPot.plusPot(betting);
                 turn = 0;
             } else {
-                pots.get(0).plusPot(betting);
+                mainPot.plusPot(betting);
                 turn++;
             }
         }
@@ -89,18 +91,26 @@ public class Round {
         int turn = 0;
         pots.add(new Pot(players));
         int min = searchMin(players);
-        getOpenPot().plusPot(min);
+        getOpenPot().plusPot(min); // 이전에 올인했던 플레이어 최대 배팅금
         while (turn < players.size()) {
+            Pot pot = getOpenPot();
             curPlayerIdx = (curPlayerIdx + 1) % players.size();
             Player curPlayer = players.get(curPlayerIdx);
-            if(curPlayer.getState()== Player.State.FOLD) continue;
-            if (curPlayer.getMoney() == min) {
+
+            if(curPlayer.getState()== Player.State.FOLD) continue;  // 기존의 Fold 무시
+            if (curPlayer.getMoney() == min) {  // 최대 배팅금만 가진 플레이어 -> 콜(메인 팟) 혹은 폴드
                 curPlayer.sendMessage("Call Or Fold");
-                curPlayer.takeTurn(min);
-                if (curPlayer.getState() == Player.State.ALLIN) getOpenPot().plusPot(min);
-            } else if (curPlayer.getMoney() > min) {
+                curPlayer.takeTurn(min); // 최대 배팅금 = min
+                if (curPlayer.getState() == Player.State.ALLIN) pot.plusPot(min);
+                else if(curPlayer.getState()== Player.State.FOLD){
+                    pot.plusPot(curPlayer.getCurrentBet());
+                    min = searchMin(players); continue;
+                }
+            } else if (curPlayer.getMoney() > min) { // 최대 배팅금보다 더 가진 플레이어
                 curPlayer.sendMessage("Call Or Fold Or Raise");
                 curPlayer.takeTurn(min);
+                if(curPlayer.getState() == Player.State.CALL)pot.plusPot(min);
+                else if(curPlayer.getState() == Player.State.FOLD)pot.plusPot();
             }
 
             if (curPlayer.getState() == Player.State.ALLIN) {
@@ -108,7 +118,7 @@ public class Round {
             } else if (curPlayer.getState() == Player.State.RAISE) {
                 turn = 0;
                 getOpenPot().plusPot(curPlayer);
-            } else if (curPlayer.getState() == Player.State.FOLD || curPlayer.getState() == Player.State.BANKRUPTCY) {
+            } else if (curPlayer.getState() == Player.State.FOLD) {
                 getOpenPot().plusPot(curPlayer);
             } else turn++;
         }
