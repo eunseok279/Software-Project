@@ -6,7 +6,7 @@ import java.net.Socket;
 
 public class Player { // 플레이어의 정보가 담긴 클래스
     enum State {
-        BANKRUPTCY, LIVE, WINNER, FOLD, CALL, RAISE, ALLIN, CHECK
+        LIVE, WINNER, FOLD, CALL, RAISE, ALLIN, CHECK
     }
 
     Hand hand;
@@ -28,6 +28,7 @@ public class Player { // 플레이어의 정보가 담긴 클래스
         this.state = State.LIVE;
         this.out = new PrintWriter(socket.getOutputStream(), true);
         bet = new Bet(this);
+        hand = new Hand();
     }
 
     public String getName() {
@@ -48,6 +49,7 @@ public class Player { // 플레이어의 정보가 담긴 클래스
 
     public void betMoney(int money) {
         this.currentBet += money;
+        minusMoney(money);
     }
 
     public int getMoney() {

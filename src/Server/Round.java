@@ -5,14 +5,12 @@ import java.util.List;
 
 public class Round {
     List<Player> players;
-    List<Player> activePlayer;
     List<Pot> pots = new ArrayList<>();
     static int basicBet;
     boolean roundFirst = false;
 
     public Round(List<Player> players) {
         this.players = players;
-        activePlayer = new ArrayList<>(players);
         pots.add(new Pot(players));
     }
 
@@ -53,10 +51,11 @@ public class Round {
 
     public int playRound(int currentPlayerIndex) {
         int turn = 0;
-
-        while (turn < activePlayer.size()) {
-            currentPlayerIndex = (currentPlayerIndex + 1) % activePlayer.size();
-            Player currentPlayer = activePlayer.get(currentPlayerIndex);
+        if (!checkFolds(players)) return -1;
+        while (turn < players.size()) {
+            currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
+            Player currentPlayer = players.get(currentPlayerIndex);
+            int betting = currentPlayer.getCurrentBet();
 
             currentPlayer.sendMessage("Your Turn");
             currentPlayer.sendMessage("Current Minimum Bet >> " + basicBet);
@@ -64,71 +63,67 @@ public class Round {
             if (roundFirst) {
                 currentPlayer.takeTurn(0);
             } else {
-                currentPlayer.sendMessage("Minimum Raise >> " + (2 * basicBet - currentPlayer.getCurrentBet()));
+                currentPlayer.sendMessage("Minimum Raise >> " + (2 * basicBet - betting));
                 currentPlayer.takeTurn(basicBet);
             }
 
-            if (currentPlayer.getState() == Player.State.FOLD || currentPlayer.getState() == Player.State.BANKRUPTCY) {
-                activePlayer.remove(currentPlayer);
-                currentPlayerIndex--;
-            } else if (currentPlayer.getState() == Player.State.ALLIN) {
-                activePlayer.remove(currentPlayer);
-                currentPlayerIndex = createSubPot(currentPlayerIndex);
-            } else if (currentPlayer.getState() == Player.State.RAISE) turn = 0;
-            else turn++;
+            if (currentPlayer.getState() == Player.State.FOLD) pots.get(0).plusPot(betting);
+            else if (currentPlayer.getState() == Player.State.ALLIN)
+                createSubPot(currentPlayerIndex);
+            else if (currentPlayer.getState() == Player.State.RAISE) {
+                pots.get(0).plusPot(betting);
+                turn = 0;
+            } else {
+                pots.get(0).plusPot(betting);
+                turn++;
+            }
         }
-        for (Player p : activePlayer) {
-            pots.get(0).plusPot(p.getCurrentBet());
-            p.minusMoney(p.getCurrentBet());
-            p.setCurrentBet(0);
+        for (Player player : players) {
+            player.setCurrentBet(0);
         }
         return currentPlayerIndex;
     }
 
-    public static void setBasicBet(int money) {
-        basicBet = money;
-    }
 
-    public int createSubPot(int curPlayerIdx) {
+    public void createSubPot(int curPlayerIdx) {
         int turn = 0;
-        int min = searchMin();
-        Pot pot = null;
-        while (turn < activePlayer.size()) {
-            curPlayerIdx = (curPlayerIdx + 1) % activePlayer.size();
-            Player curPlayer = activePlayer.get(curPlayerIdx);
+        pots.add(new Pot(players));
+        int min = searchMin(players);
+        getOpenPot().plusPot(min);
+        while (turn < players.size()) {
+            curPlayerIdx = (curPlayerIdx + 1) % players.size();
+            Player curPlayer = players.get(curPlayerIdx);
+            if(curPlayer.getState()== Player.State.FOLD) continue;
             if (curPlayer.getMoney() == min) {
                 curPlayer.sendMessage("Call Or Fold");
                 curPlayer.takeTurn(min);
-            } else if (curPlayer.getMoney()  > min) {
+                if (curPlayer.getState() == Player.State.ALLIN) getOpenPot().plusPot(min);
+            } else if (curPlayer.getMoney() > min) {
                 curPlayer.sendMessage("Call Or Fold Or Raise");
                 curPlayer.takeTurn(min);
             }
 
             if (curPlayer.getState() == Player.State.ALLIN) {
                 getOpenPot().plusPot(min);
-                activePlayer.remove(curPlayer);
-                curPlayerIdx--;
             } else if (curPlayer.getState() == Player.State.RAISE) {
                 turn = 0;
-                getOpenPot().plusPot(min);
+                getOpenPot().plusPot(curPlayer);
             } else if (curPlayer.getState() == Player.State.FOLD || curPlayer.getState() == Player.State.BANKRUPTCY) {
-                activePlayer.remove(curPlayer);
-                curPlayerIdx--;
+                getOpenPot().plusPot(curPlayer);
             } else turn++;
         }
-        pot.setClosed();
+        getOpenPot().setClosed();
         pots.add(new Pot(activePlayer));
         for (Player p : activePlayer) {
             getOpenPot().plusPot(p.getCurrentBet() - min);
             p.minusMoney(p.getCurrentBet());
             p.setCurrentBet(0);
         }
-        return curPlayerIdx;
     }
 
-    public int searchMin() {
-        int min = activePlayer.get(0).getMoney();
-        for (Player p : activePlayer) {
+    public int searchMin(List<Player> players) {
+        int min = players.get(0).getMoney();
+        for (Player p : players) {
             if (p.getMoney() < min) min = p.getMoney();
         }
         return min;
@@ -138,5 +133,18 @@ public class Round {
         for (Pot pot : pots)
             if (!pot.getClosed()) return pot;
         return null;
+    }
+
+    public boolean checkFolds(List<Player> players) {
+        int count = 0;
+        for (Player player : players) {
+            if (player.getState() == Player.State.FOLD) count++;
+        }
+        if (players.size() - count == 1) return false;
+        else return true;
+    }
+
+    public static void setBasicBet(int money) {
+        basicBet = money;
     }
 }

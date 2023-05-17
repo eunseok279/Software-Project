@@ -60,7 +60,11 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                     }
                     if (allReady) {
                         sendAll("All players are ready. Starting the game...");
-                        gameStart();
+                        try {
+                            gameStart();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
                         for (Player player : players) {
                             player.setReady(false);
                         }
@@ -78,13 +82,24 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
 
     }
 
-    public void gameStart() {
+    public void gameStart() throws IOException {
         setDealerButton(players);
         Round round = new Round(players);
         round.smallBlind();
         round.bigBlind();
+        for(Player player:players)
+            getPersonalCard(player.hand.cards);
         currentPlayerIndex = 2; // 0번 - 딜러 버튼 | 1번 - 스몰 블라인드 | 2번 - 빅블라인드
         currentPlayerIndex = round.freeFlop(currentPlayerIndex);
+        currentPlayerIndex = round.flop(currentPlayerIndex);
+        currentPlayerIndex = round.turn(currentPlayerIndex);
+        currentPlayerIndex = round.river(currentPlayerIndex);
+        for(Player player : players)
+            if(player.getMoney()<2000){
+                player.sendMessage("Your Base Money is not enough");
+                player.getSocket().close();
+                players.remove(player);
+            }
     }
 
     public synchronized Player getCurrentPlayer() {
@@ -99,7 +114,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         tableCard.add(card);
 
         for (Player player : players)
-            player.hand.ownCards.add(card);
+            player.hand.cards.add(card);
     }
     public int compareHands(Player p1, Player p2) {
         Hand.HandRank p1HandRank = p1.hand.determineHandRank();
@@ -245,7 +260,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     }
 
     private void setDealerButton(List<Player> players) {
-        sendAll("Setup Dealer Button");
+        sendAll("Set Dealer Button");
         Map<Integer, Card> cardMap = new HashMap<>();
         for (int i = 0; i < players.size(); i++) {
             cardMap.put(i, deck.drawCard());
@@ -259,6 +274,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         });
         sendAll(players.get(entry.get(0).getKey()).getName() + "is DealerButton!!");
         rearrangeOrder(players, entry.get(0).getKey());
+        initUserCard();
         deck.initCard();
         deck.shuffle();
     }
@@ -282,6 +298,10 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         for (Player player : players) {
             player.sendMessage(message);
         }
+    }
+    public void initUserCard(){
+        for(Player player:players)
+            player.hand.cards.clear();
     }
 }
 
