@@ -6,7 +6,7 @@ import java.net.Socket;
 
 public class Player { // 플레이어의 정보가 담긴 클래스
     enum State {
-        LIVE, WINNER, FOLD, CALL, RAISE, ALLIN, CHECK
+        LIVE, FOLD, CALL, RAISE, ALLIN, CHECK
     }
 
     Hand hand;
@@ -49,15 +49,11 @@ public class Player { // 플레이어의 정보가 담긴 클래스
 
     public void betMoney(int money) {
         this.currentBet += money;
-        minusMoney(money);
+        this.money -= money;
     }
 
     public int getMoney() {
         return money;
-    }
-
-    public void minusMoney(int money) {
-        this.money -= money;
     }
 
     public void plusMoney(int money) {
@@ -80,7 +76,7 @@ public class Player { // 플레이어의 정보가 담긴 클래스
         out.println(message);
     }
 
-    public void takeTurn(int basicBet) { // basicBet = 앞 사람의 배팅금
+    public void chooseBetAction(int basicBet, boolean noBet) { // basicBet = 앞 사람의 배팅금
         command = null;                  // currentBet = 현재 내놓은 배팅금
         while (command == null) {
             try {
@@ -89,20 +85,27 @@ public class Player { // 플레이어의 정보가 담긴 클래스
                 e.printStackTrace();
             }
             if (command != null) {
-                if (basicBet == 0) {
+                if (noBet) {
                     if (command.startsWith("/bet")) {
                         String[] parts = command.split(" ");
                         if (parts.length == 2) {
                             int betMoney = Integer.parseInt(parts[1]);
-                            result = bet.firstBet(betMoney);
+                            result = bet.bet(betMoney);
                             if (!result) command = null;
                             else break;
                         }
+                    } else if (command.startsWith("/fold")) {
+                        bet.fold();
+                        break;
+                    } else if (command.startsWith("/check")) {
+                        break;
+                    } else {
+                        sendMessage("Wrong Choice");
+                        command = null;
                     }
                 } else {
-                    if (command.startsWith("/bet")) command = null;
-                    else if (command.startsWith("/call")) {
-                        result = bet.call(basicBet - currentBet); // 전 사람의 배팅금 - 현 배팅금
+                    if (command.startsWith("/call")) {
+                        result = bet.call(basicBet - currentBet); // 기본 배팅 - 나의 배팅금
                         if (!result) command = null;
                         else break;
                     } else if (command.startsWith("/raise")) {
@@ -116,18 +119,41 @@ public class Player { // 플레이어의 정보가 담긴 클래스
                     } else if (command.startsWith("/fold")) {
                         bet.fold();
                         break;
-                    } else if (command.startsWith("/check")) {
-                        if (!bet.check(basicBet)) command = null;
-                        else break;
-                    } else if (command.startsWith("/allin")) {
-                        bet.allIn();
-                        state = State.ALLIN;
-                        break;
+                    } else {
+                        sendMessage("Wrong Choice");
+                        command = null;
                     }
                 }
             }
         }
     }
+
+    public void respondToAllIn(boolean result){
+        command = null;
+        while (command == null) {
+            try {
+                Thread.sleep(100); // 0.1초마다 확인
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            if (command != null) {
+                if (result) {
+                    if(command.startsWith("/allin")){
+                        bet.allIn(); break;
+                    }else if(command.startsWith("fold")){
+                        bet.fold(); break;
+                    }else{
+                        sendMessage("Wrong Choice");
+                        command = null;
+                    }
+                }
+                else{
+
+                }
+            }
+        }
+    }
+
 
     public void setCommand(String command) {
         this.command = command;

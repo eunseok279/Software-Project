@@ -16,8 +16,8 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     List<Player> players = Collections.synchronizedList(new ArrayList<>());
     List<Player> winners;
     int currentPlayerIndex;
-    int betting;
-
+    int gameCount = 1;
+    int baseBet = 4;
 
 
     public void setUpGame(int port) {
@@ -83,39 +83,49 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     }
 
     public void gameStart() throws IOException {
+        if (gameCount == 3) {
+            gameCount = 0;
+            baseBet *= 2;
+        }
         setDealerButton(players);
-        Round round = new Round(players);
+        Round round = new Round(players, currentPlayerIndex, baseBet);
         round.smallBlind();
         round.bigBlind();
-        for(Player player:players)
+        for (Player player : players)
             getPersonalCard(player.hand.cards);
-        currentPlayerIndex = 2; // 0번 - 딜러 버튼 | 1번 - 스몰 블라인드 | 2번 - 빅블라인드
-        currentPlayerIndex = round.freeFlop(currentPlayerIndex);
-        currentPlayerIndex = round.flop(currentPlayerIndex);
-        currentPlayerIndex = round.turn(currentPlayerIndex);
-        currentPlayerIndex = round.river(currentPlayerIndex);
-        for(Player player : players)
-            if(player.getMoney()<2000){
+        currentPlayerIndex = 3; // 0번 - 딜러 버튼 | 1번 - 스몰 블라인드 | 2번 - 빅블라인드
+        round.freeFlop(); // 빅블라인드 다음 사람부터 시작
+        round.flop();
+        round.turn();
+        round.river();
+        for (Player player : players)
+            if (player.getMoney() < baseBet) {
                 player.sendMessage("Your Base Money is not enough");
                 player.getSocket().close();
                 players.remove(player);
             }
+        if (players.size() == 1)
+            sendMsg("Winner of Winner is you! Congratulation", players.get(0));
+        gameCount++;
     }
 
     public synchronized Player getCurrentPlayer() {
         return players.get(currentPlayerIndex);
     }
+
     public void getPersonalCard(List<Card> cards) {
         for (int i = 0; i < 2; i++) {
             cards.add(deck.drawCard());
         }
     }
+
     public void addCard(Card card) {
         tableCard.add(card);
 
         for (Player player : players)
             player.hand.cards.add(card);
     }
+
     public int compareHands(Player p1, Player p2) {
         Hand.HandRank p1HandRank = p1.hand.determineHandRank();
         Hand.HandRank p2HandRank = p2.hand.determineHandRank();
@@ -151,6 +161,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             };
         }
     }
+
     private int compareThreePairsAndKicker(Hand h1, Hand h2) {
         List<Integer> h1Three = h1.getThreePairRanks();
         List<Integer> h2Three = h2.getThreePairRanks();
@@ -299,8 +310,9 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             player.sendMessage(message);
         }
     }
-    public void initUserCard(){
-        for(Player player:players)
+
+    public void initUserCard() {
+        for (Player player : players)
             player.hand.cards.clear();
     }
 }

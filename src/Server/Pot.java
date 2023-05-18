@@ -7,20 +7,20 @@ public class Pot {
     private boolean closed = false;
     List<Player> potPlayer;
 
-    public Pot(List<Player> potPlayer) {
-        this.potPlayer = potPlayer;
+    public Pot() {
         potMoney = 0;
     }
 
-    public void plusPot(int money) {
+    public void plusPot(int money,Player player) {
         potMoney += money;
+        player.setCurrentBet(player.getCurrentBet()-money);
     }
 
-    public int getPot() {
+    public int getPotMoney() {
         return potMoney;
     }
     public void setClosed(){
-        this.closed = true;
+        this.closed =true;
     }
     public boolean getClosed(){
         return closed;
