@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public class Player { // 플레이어의 정보가 담긴 클래스
+public class User { // 플레이어의 정보가 담긴 클래스
     enum State {
-        LIVE, FOLD, CALL, RAISE, ALLIN, CHECK
+        LIVE, FOLD, CALL, RAISE, ALLIN, CHECK,DEPLETED
     }
 
     Hand hand;
@@ -21,7 +21,7 @@ public class Player { // 플레이어의 정보가 담긴 클래스
     private String command;
     private boolean result;
 
-    public Player(Socket socket, String name) throws IOException {
+    public User(Socket socket, String name) throws IOException {
         this.socket = socket;
         this.name = name;
         this.ready = false;

@@ -3,34 +3,36 @@ package Server;
 import java.util.List;
 
 public class Round {
-    List<Player> players;
+    List<User> users;
     List<Pot> pots;
     Pot mainPot;
     static int basicBet;
     private int baseBet;
-    int currentPlayerIndex;
+    int currentUserIndex;
     boolean noBetting = false;
+    int userCount;
 
-    public Round(List<Player> players, int currentPlayerIndex, int baseBet) {
-        this.players = players;
+    public Round(List<User> users, int currentUserIndex, int baseBet) {
+        this.users = users;
         pots.add(new Pot());
         mainPot = pots.get(0);
-        this.currentPlayerIndex = currentPlayerIndex;
+        this.currentUserIndex = currentUserIndex;
         this.baseBet = baseBet;
+        this.userCount = users.size();
     }
 
     public void smallBlind() { // 시작 강제 베팅
-        Player player = players.get(1);
-        player.sendMessage("You are Small Blind!! Basic Betting >> 2");
-        player.betMoney(baseBet / 2);
-        mainPot.plusPot(baseBet / 2, player);
+        User user = users.get(1);
+        user.sendMessage("You are Small Blind!! Basic Betting >> 2");
+        user.betMoney(baseBet / 2);
+        mainPot.plusPot(baseBet / 2, user);
     }
 
     public void bigBlind() {
-        Player player = players.get(2);
-        player.sendMessage("You are Big Blind!! Basic Betting >> 4");
-        player.betMoney(baseBet);
-        mainPot.plusPot(baseBet, player);
+        User user = users.get(2);
+        user.sendMessage("You are Big Blind!! Basic Betting >> 4");
+        user.betMoney(baseBet);
+        mainPot.plusPot(baseBet, user);
     }
 
     public void freeFlop() { // 개인 카드 2장 분배 후 첫 배팅
@@ -41,48 +43,48 @@ public class Round {
     public void flop() { // 테이블 카드 3장 공개 후 2번째 배팅
         basicBet = baseBet;
         noBetting = true;
-        currentPlayerIndex = findIfSBFold();
+        currentUserIndex = findIfSBFold();
         playRound();
     }
 
     public void turn() { // 4번째 테이블 카드 1장 공개 후 3번째 배팅
         basicBet = baseBet;
         noBetting = true;
-        currentPlayerIndex = findIfSBFold();
+        currentUserIndex = findIfSBFold();
         playRound();
     }
 
     public void river() { // 5번째 테이블 카드 1장 공개 후 마지막 배팅
         basicBet = baseBet;
         noBetting = true;
-        currentPlayerIndex = findIfSBFold();
+        currentUserIndex = findIfSBFold();
         playRound();
     }
 
     public void playRound() {
         int turn = 0;
-        if (!checkFolds(players)) return;
-        while (turn < players.size()) {
-            Player currentPlayer = players.get(currentPlayerIndex);
+        if (!checkFolds(users)) return;
+        while (turn < userCount) {
+            User currentUser = users.get(currentUserIndex);
 
-            Player.State state = currentPlayer.getState();
-            if (state == Player.State.FOLD) {
+            User.State state = currentUser.getState();
+            if (state == User.State.FOLD||state==User.State.DEPLETED) {
                 turn++;
                 continue;
             }
 
-            currentPlayer.sendMessage("Your Turn");
-            currentPlayer.sendMessage("Current Minimum Bet >> " + basicBet);
+            currentUser.sendMessage("Your Turn");
+            currentUser.sendMessage("Current Minimum Bet >> " + basicBet);
 
             if (noBetting) { // 모두가 체크거나 현재플레이어가 라운드 첫 베팅(프리플랍 제외)
-                currentPlayer.chooseBetAction(basicBet, true);
+                currentUser.chooseBetAction(basicBet, true);
             } else {
-                currentPlayer.sendMessage("Minimum Raise >> " + 2 * (basicBet - currentPlayer.getCurrentBet()));
-                currentPlayer.chooseBetAction(basicBet, false);
+                currentUser.sendMessage("Minimum Raise >> " + 2 * (basicBet - currentUser.getCurrentBet()));
+                currentUser.chooseBetAction(basicBet, false);
             }
 
-            currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
-            switch (currentPlayer.getState()) {
+            currentUserIndex = (currentUserIndex + 1) % users.size();
+            switch (currentUser.getState()) {
                 case CALL, CHECK -> turn++;
                 case ALLIN -> {
                     turn = 0;
@@ -92,11 +94,12 @@ public class Round {
                     noBetting = false;
                     turn = 0;
                 }
+                case FOLD -> userCount--;
             }
         }
         Pot pot = getOpenPot();
-        for (Player player : players) {
-            pot.plusPot(player.getCurrentBet(), player);
+        for (User user : users) {
+            pot.plusPot(user.getCurrentBet(), user);
         }
     }
 
@@ -106,39 +109,39 @@ public class Round {
         int min = min();
         int max = max();
         int turn = 0;
-        while (turn < players.size()) {
-            Player currentPlayer = players.get(currentPlayerIndex);
-            if (currentPlayer.getState() == Player.State.FOLD) {
+        while (turn < users.size()) {
+            User currentUser = users.get(currentUserIndex);
+            if (currentUser.getState() == User.State.FOLD) {
                 turn++;
                 continue;
             }
-            int ownMoney = currentPlayer.getMoney() + currentPlayer.getCurrentBet();
+            int ownMoney = currentUser.getMoney() + currentUser.getCurrentBet();
             boolean result = ownMoney < basicBet; // basicBet = 올인 금액
             if (result) { //올인 금액보다 적다면 -> 폴드 or 올인
-                currentPlayer.sendMessage("Your Turn");
-                currentPlayer.sendMessage("Fold or All-In");
-                currentPlayer.respondToAllIn(true);
+                currentUser.sendMessage("Your Turn");
+                currentUser.sendMessage("Fold or All-In");
+                currentUser.respondToAllIn(true);
             } else { // 올인 금액보다 같거나 크다면 -> 콜, 폴드, 레이즈
-                currentPlayer.sendMessage("Your Turn");
-                currentPlayer.sendMessage("Call or Fold or Raise");
-                currentPlayer.respondToAllIn(false);
-                switch (currentPlayer.getState()) {
-                    case FOLD, CALL -> pot.plusPot(currentPlayer.getCurrentBet(), currentPlayer);
-                    case RAISE -> pot.plusPot(min, currentPlayer);
+                currentUser.sendMessage("Your Turn");
+                currentUser.sendMessage("Call or Fold or Raise");
+                currentUser.respondToAllIn(false);
+                switch (currentUser.getState()) {
+                    case FOLD, CALL -> pot.plusPot(currentUser.getCurrentBet(), currentUser);
+                    case RAISE -> pot.plusPot(min, currentUser);
                 }
             }
-            currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
+            currentUserIndex = (currentUserIndex + 1) % users.size();
         }
         for ()
             pot.setClosed();
     }
 
-    public boolean checkFolds(List<Player> players) { // 1명만 제외 전부 폴드면 남은 한명 자동 승리
+    public boolean checkFolds(List<User> users) { // 1명만 제외 전부 폴드면 남은 한명 자동 승리
         int count = 0;
-        for (Player player : players) {
-            if (player.getState() == Player.State.FOLD) count++;
+        for (User user : users) {
+            if (user.getState() == User.State.FOLD) count++;
         }
-        if (players.size() - count == 1) return false;
+        if (users.size() - count == 1) return false;
         else return true;
     }
 
@@ -155,28 +158,28 @@ public class Round {
     public int findIfSBFold() {
         int idx = 1;
         while (true) {
-            if (players.get(idx).getState() == Player.State.FOLD) idx--;
+            if (users.get(idx).getState() == User.State.FOLD) idx--;
             else break;
-            if (idx == -1) idx = players.size() - 1;
+            if (idx == -1) idx = users.size() - 1;
         }
         return idx;
     }
 
     public int min() {
-        int min = players.get(0).getMoney() + players.get(0).getCurrentBet();
-        for (Player player : players) {
-            if (player.getState() == Player.State.FOLD) continue;
-            int ownMoney = player.getMoney() + player.getCurrentBet();
+        int min = users.get(0).getMoney() + users.get(0).getCurrentBet();
+        for (User user : users) {
+            if (user.getState() == User.State.FOLD) continue;
+            int ownMoney = user.getMoney() + user.getCurrentBet();
             if (ownMoney < min) min = ownMoney;
         }
         return min;
     }
 
     public int max() {
-        int max = players.get(0).getMoney() + players.get(0).getCurrentBet();
-        for (Player player : players) {
-            if (player.getState() == Player.State.FOLD) continue;
-            if (player.getMoney() + player.getCurrentBet() > max) max = player.getMoney() + player.getCurrentBet();
+        int max = users.get(0).getMoney() + users.get(0).getCurrentBet();
+        for (User user : users) {
+            if (user.getState() == User.State.FOLD) continue;
+            if (user.getMoney() + user.getCurrentBet() > max) max = user.getMoney() + user.getCurrentBet();
         }
         return max;
     }

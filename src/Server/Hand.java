@@ -37,7 +37,7 @@ public class Hand {
     private boolean isOnePair() {
         Map<Rank, Integer> rankCountMap = new HashMap<>();
 
-        for (Card card : ownCards) {
+        for (Card card : cards) {
             rankCountMap.put(card.rank(), rankCountMap.getOrDefault(card.rank(), 0) + 1); // 숫자가 있으면 +1 없으면 count 1
         }
 
@@ -53,7 +53,7 @@ public class Hand {
     private boolean isTwoPair() {
         Map<Rank, Integer> rankCountMap = new HashMap<>();
 
-        for (Card card : ownCards) {
+        for (Card card : cards) {
             rankCountMap.put(card.rank(), rankCountMap.getOrDefault(card.rank(), 0) + 1);
         }
 
@@ -68,10 +68,10 @@ public class Hand {
 
 
     private boolean isThreeOfAKind() {
-        if (ownCards.size() <= 3) return false;
+        if (cards.size() <= 3) return false;
         Map<Rank, Integer> rankCountMap = new HashMap<>();
 
-        for (Card card : ownCards) {
+        for (Card card : cards) {
             rankCountMap.put(card.rank(), rankCountMap.getOrDefault(card.rank(), 0) + 1);
         }
 
@@ -85,8 +85,8 @@ public class Hand {
     }
 
     private boolean isStraight() { // 5개가 연속된 숫자
-        if (ownCards.size() < 5) return false;
-        List<Card> straightCards = new ArrayList<>(ownCards);
+        if (cards.size() < 5) return false;
+        List<Card> straightCards = new ArrayList<>(cards);
         straightCards.sort(cardComparator);
         int consecutiveCards = 1;
 
@@ -104,10 +104,10 @@ public class Hand {
     }
 
     private boolean isFlush() {
-        if (ownCards.size() < 5) return false;
+        if (cards.size() < 5) return false;
         Map<Suit, Integer> suitCountMap = new HashMap<>();
 
-        for (Card card : ownCards) {
+        for (Card card : cards) {
             suitCountMap.put(card.suit(), suitCountMap.getOrDefault(card.suit(), 0) + 1);
         }
 
@@ -120,15 +120,15 @@ public class Hand {
     }
 
     private boolean isFullHouse() {
-        if (ownCards.size() < 5) return false;
+        if (cards.size() < 5) return false;
         return isThreeOfAKind() && isOnePair();
     }
 
     private boolean isFourOfAKind() {
-        if (ownCards.size() < 5) return false;
+        if (cards.size() < 5) return false;
         Map<Rank, Integer> rankCountMap = new HashMap<>();
 
-        for (Card card : ownCards) {
+        for (Card card : cards) {
             rankCountMap.put(card.rank(), rankCountMap.getOrDefault(card.rank(), 0) + 1);
         }
 
@@ -142,10 +142,10 @@ public class Hand {
     }
 
     private boolean isStraightFlush() {
-        if (ownCards.size() < 5) return false;
+        if (cards.size() < 5) return false;
         Map<Suit, List<Card>> suitCountMap = new HashMap<>();
 
-        for (Card card : ownCards) {
+        for (Card card : cards) {
             suitCountMap.putIfAbsent(card.suit(), new ArrayList<>());
             suitCountMap.get(card.suit()).add(card);
         }
@@ -171,10 +171,10 @@ public class Hand {
     }
 
     private boolean isRoyalFlush() {
-        if (ownCards.size() < 5) return false;
+        if (cards.size() < 5) return false;
         Map<Suit, List<Card>> suitCountMap = new HashMap<>();
 
-        for (Card card : ownCards) {
+        for (Card card : cards) {
             suitCountMap.putIfAbsent(card.suit(), new ArrayList<>());
             suitCountMap.get(card.suit()).add(card);
         }
@@ -196,7 +196,7 @@ public class Hand {
     }
 
     public void showHand() {
-        for (Card card : ownCards)
+        for (Card card : cards)
             System.out.println(card.showCard());
     }
 
@@ -272,7 +272,7 @@ public class Hand {
     }
 
     private Card findHighestCardInStraight() {
-        List<Card> straightCards = new ArrayList<>(ownCards);
+        List<Card> straightCards = new ArrayList<>(cards);
         straightCards.sort(cardComparator);
 
         List<Card> list = new ArrayList<>();
@@ -293,7 +293,7 @@ public class Hand {
         // 플러쉬 또는 스트레이트 플러쉬의 가장 높은 카드를 찾는 메서드
         Map<Suit, List<Card>> cardsBySuit = new HashMap<>();
 
-        for (Card card : ownCards) {
+        for (Card card : cards) {
             cardsBySuit.putIfAbsent(card.suit(), new ArrayList<>());
             cardsBySuit.get(card.suit()).add(card);
         }
@@ -319,7 +319,7 @@ public class Hand {
     private Card findHighestCardInStraightFlush() {
         Map<Suit, List<Card>> cardsBySuit = new HashMap<>();
 
-        for (Card card : ownCards) {
+        for (Card card : cards) {
             cardsBySuit.putIfAbsent(card.suit(), new ArrayList<>());
             cardsBySuit.get(card.suit()).add(card);
         }
@@ -346,7 +346,7 @@ public class Hand {
 
     private Map<Integer, Integer> getRankCounts() {
         Map<Integer, Integer> rankCounts = new HashMap<>();
-        for (Card card : ownCards) {
+        for (Card card : cards) {
             int rank = card.rank().ordinal();
             rankCounts.put(rank, rankCounts.getOrDefault(rank, 0) + 1);
         }
@@ -365,7 +365,7 @@ public class Hand {
 
     private List<Integer> getSortedRanksDescending() {
         List<Integer> ranks = new ArrayList<>();
-        for (Card card : ownCards) {
+        for (Card card : cards) {
             ranks.add(card.rank().ordinal());
         }
         ranks.sort(Collections.reverseOrder());
@@ -373,8 +373,8 @@ public class Hand {
     }
 
     public Card findHighestCardInAll() {
-        Card highestCard = ownCards.get(0);
-        for (Card card : ownCards) {
+        Card highestCard = cards.get(0);
+        for (Card card : cards) {
             if (card.rank().ordinal() > highestCard.rank().ordinal()) {
                 highestCard = card;
             }

@@ -1,93 +1,93 @@
 package Server;
 
 public class Bet { // 배팅 방식
-    Player player;
+    User user;
 
-    public Bet(Player player) {
-        this.player = player;
-        int betting = player.getCurrentBet();
+    public Bet(User user) {
+        this.user = user;
+        int betting = user.getCurrentBet();
     }
 
     public boolean bet(int betMoney) { // 각 라운드 첫 배팅(프리플랍 제외)
-        if (betMoney > player.getMoney()) { // 배팅금 > 소지금
-            player.sendMessage("Not Enough Money!!");
+        if (betMoney > user.getMoney()) { // 배팅금 > 소지금
+            user.sendMessage("Not Enough Money!!");
             return false;
         }
-        else if(betMoney == player.getMoney()){
-            player.sendMessage("All-In");
+        else if(betMoney == user.getMoney()){
+            user.sendMessage("All-In");
             return allIn();
         }
         if (betMoney < Round.basicBet) { // 배팅금 < 최소 배팅
-            player.sendMessage("Minimum is >> " + Round.basicBet);
+            user.sendMessage("Minimum is >> " + Round.basicBet);
             return false;
         }
-        player.betMoney(betMoney);
+        user.betMoney(betMoney);
         Round.setBasicBet(betMoney); // 첫 배팅 => 최소 배팅금
-        player.setState(Player.State.RAISE);
+        user.setState(User.State.RAISE);
         return true;
     }
 
     public boolean call(int callMoney) { // 앞 사람의 배팅금을 콜
-        if (callMoney > player.getMoney()) { // 콜 > 소지금 -> 폴드 혹은 allin
-            player.sendMessage("Not Enough Money!! You Should All-In or Fold");
+        if (callMoney > user.getMoney()) { // 콜 > 소지금 -> 폴드 혹은 allin
+            user.sendMessage("Not Enough Money!! You Should All-In or Fold");
             return false;
-        } else if (callMoney == player.getMoney()) { // 콜 = 소지금 -> 올인
-            player.sendMessage("All-In");
+        } else if (callMoney == user.getMoney()) { // 콜 = 소지금 -> 올인
+            user.sendMessage("All-In");
             return allIn();
         }
         if (callMoney == 0) { // 기본 배팅금 = 배팅금 -> 체크
-            player.sendMessage("Check");
+            user.sendMessage("Check");
             return check();
         }
-        player.betMoney(callMoney);
-        player.setState(Player.State.CALL);
+        user.betMoney(callMoney);
+        user.setState(User.State.CALL);
         return true;
     }
 
     public boolean raise(int raiseMoney, int currentBet, int basicBet) { // 앞 사람의 레이즈
         int minimumRaise = 2*(basicBet - currentBet); // 기본 배팅금 - 나의 배팅금의 두배
         if (raiseMoney  < minimumRaise) { // 민레이즈
-            player.sendMessage("Minimum raise is >> " + minimumRaise);
+            user.sendMessage("Minimum raise is >> " + minimumRaise);
             return false;
         }
-        if (raiseMoney > player.getMoney()) { // 배팅금 > 소지금
-            player.sendMessage("Not Enough Money!!");
+        if (raiseMoney > user.getMoney()) { // 배팅금 > 소지금
+            user.sendMessage("Not Enough Money!!");
             return false;
-        } else if (raiseMoney == player.getMoney()) { // 배팅금 = 소지금 -> 올인
-            player.sendMessage("All In");
+        } else if (raiseMoney == user.getMoney()) { // 배팅금 = 소지금 -> 올인
+            user.sendMessage("All In");
             return allIn();
         }
         if (raiseMoney + currentBet < basicBet) { // 전체 배팅금 < 기본 배팅금
-            player.sendMessage("Minimum Betting >> " + basicBet);
+            user.sendMessage("Minimum Betting >> " + basicBet);
             return false;
         } else if (raiseMoney + currentBet == basicBet) { // 전체 배팅금 == 기본 배팅금 -> 콜
-            player.sendMessage("Call");
+            user.sendMessage("Call");
             return call(raiseMoney);
         }
-        player.betMoney(raiseMoney);
-        Round.setBasicBet(player.getCurrentBet()); // 레이즈에 성공하면 기본 배팅금 = 전체 배팅금
-        player.setState(Player.State.RAISE);
+        user.betMoney(raiseMoney);
+        Round.setBasicBet(user.getCurrentBet()); // 레이즈에 성공하면 기본 배팅금 = 전체 배팅금
+        user.setState(User.State.RAISE);
         return true;
     }
 
     public void fold() {
-        player.setState(Player.State.FOLD);
+        user.setState(User.State.FOLD);
     }
 
     public boolean allIn() {
-        int money = player.getMoney();
-        player.betMoney(money);
+        int money = user.getMoney();
+        user.betMoney(money);
         Round.setBasicBet(money);
-        player.setState(Player.State.ALLIN);
+        user.setState(User.State.ALLIN);
         return true;
     }
 
     public boolean check() { // 턴을 넘긴다 배팅x
-        if (player.getCurrentBet() < Round.basicBet) { // 현재 배팅금 < 기본 배팅금 -> 콜
-            player.sendMessage("You Can't Check!");
+        if (user.getCurrentBet() < Round.basicBet) { // 현재 배팅금 < 기본 배팅금 -> 콜
+            user.sendMessage("You Can't Check!");
             return false;
         }
-        player.setState(Player.State.CHECK);
+        user.setState(User.State.CHECK);
         return true;
     }
 }

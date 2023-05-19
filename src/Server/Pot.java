@@ -5,15 +5,15 @@ import java.util.List;
 public class Pot {
     private int potMoney;
     private boolean closed = false;
-    List<Player> potPlayer;
+    List<User> potUser;
 
     public Pot() {
         potMoney = 0;
     }
 
-    public void plusPot(int money,Player player) {
+    public void plusPot(int money,User user) {
         potMoney += money;
-        player.setCurrentBet(player.getCurrentBet()-money);
+        user.setCurrentBet(user.getCurrentBet()-money);
     }
 
     public int getPotMoney() {
