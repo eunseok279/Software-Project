@@ -95,12 +95,13 @@ public class User { // 플레이어의 정보가 담긴 클래스
                             else break;
                         }
                     } else if (command.startsWith("/fold")) {
-                        bet.fold();
+                        result = bet.fold();
                         break;
                     } else if (command.startsWith("/check")) {
                         break;
                     } else {
                         sendMessage("Wrong Choice");
+                        result = false;
                         command = null;
                     }
                 } else {
@@ -121,6 +122,7 @@ public class User { // 플레이어의 정보가 담긴 클래스
                         break;
                     } else {
                         sendMessage("Wrong Choice");
+                        result = false;
                         command = null;
                     }
                 }

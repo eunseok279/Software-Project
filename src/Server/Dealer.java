@@ -84,7 +84,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
 
     public void gameStart() throws IOException {
         if (gameCount == 3) {
-            gameCount = 0;
+            gameCount = 1;
             baseBet *= 2;
         }
         setDealerButton(users);

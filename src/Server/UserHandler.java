@@ -60,11 +60,10 @@ public class UserHandler implements Runnable {
         do{
             user.setCommand(command);
         } while(!user.getResult());
-
     }
 
     private void handleChat(String message) {
-        sendAll(user.getName()+" >> "+message);
+        sendAll("["+user.getName()+"] >> "+message);
     }
 
     private void sendAll(String message) {

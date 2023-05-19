@@ -1,9 +1,6 @@
 package Client;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
 
@@ -32,6 +29,7 @@ public class Game {
 
         Thread messageReceive = new Thread(messageReceiver);
         messageReceive.start();
+        Thread messageSend = new Thread()
         while (true) {
             System.out.println("Enter a command (READY/UNREADY):");
             String command = scanner.nextLine();
@@ -66,7 +64,23 @@ class MessageReceiver implements Runnable {
                 System.out.println(message);
             }
         } catch (IOException e) {
-            // 에러 처리
+            e.printStackTrace();
+        }
+    }
+}
+
+class MessageSender implements Runnable{
+    private PrintWriter out;
+
+    public MessageSender(Socket socket)throws IOException{
+        this.out = new PrintWriter(socket.getOutputStream(),true);
+    }
+    public void run(){
+        String message;
+        Scanner scanner = new Scanner(System.in);
+        message = scanner.nextLine();
+        while(true){
+            out.println(message);
         }
     }
 }

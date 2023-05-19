@@ -5,7 +5,6 @@ import java.util.List;
 public class Round {
     List<User> users;
     List<Pot> pots;
-    Pot mainPot;
     static int basicBet;
     private int baseBet;
     int currentUserIndex;
@@ -15,7 +14,6 @@ public class Round {
     public Round(List<User> users, int currentUserIndex, int baseBet) {
         this.users = users;
         pots.add(new Pot());
-        mainPot = pots.get(0);
         this.currentUserIndex = currentUserIndex;
         this.baseBet = baseBet;
         this.userCount = users.size();
@@ -25,14 +23,14 @@ public class Round {
         User user = users.get(1);
         user.sendMessage("You are Small Blind!! Basic Betting >> 2");
         user.betMoney(baseBet / 2);
-        mainPot.plusPot(baseBet / 2, user);
+        pots.get(0).plusPot(baseBet / 2, user);
     }
 
     public void bigBlind() {
         User user = users.get(2);
         user.sendMessage("You are Big Blind!! Basic Betting >> 4");
         user.betMoney(baseBet);
-        mainPot.plusPot(baseBet, user);
+        pots.get(0).plusPot(baseBet, user);
     }
 
     public void freeFlop() { // 개인 카드 2장 분배 후 첫 배팅
