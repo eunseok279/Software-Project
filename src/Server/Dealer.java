@@ -15,7 +15,6 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     Deck deck = new Deck();
     List<User> users = Collections.synchronizedList(new ArrayList<>());
     List<User> winners;
-    int currentUserIndex;
     int gameCount = 1;
     int baseBet = 4;
 
@@ -88,12 +87,11 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             baseBet *= 2;
         }
         setDealerButton(users);
-        Round round = new Round(users, currentUserIndex, baseBet);
+        Round round = new Round(users, baseBet);
         round.smallBlind();
         round.bigBlind();
         for (User user : users)
             getPersonalCard(user.hand.cards);
-        currentUserIndex = 3; // 0번 - 딜러 버튼 | 1번 - 스몰 블라인드 | 2번 - 빅블라인드
         round.freeFlop(); // 빅블라인드 다음 사람부터 시작
         round.flop();
         round.turn();
@@ -104,13 +102,12 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                 user.getSocket().close();
                 users.remove(user);
             }
-        if (users.size() == 1)
-            sendMsg("Winner of Winner is you! Congratulation", users.get(0));
+        if (users.size() == 1) sendMsg("Winner of Winner is you! Congratulation", users.get(0));
         gameCount++;
     }
 
     public synchronized User getCurrentUser() {
-        return users.get(currentUserIndex);
+        return users.get(Round.currentUserIndex);
     }
 
     public void getPersonalCard(List<Card> cards) {

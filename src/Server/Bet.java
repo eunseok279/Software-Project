@@ -70,15 +70,13 @@ public class Bet { // 배팅 방식
         return true;
     }
 
-    public boolean fold() {
+    public void fold() {
         user.setState(User.State.FOLD);
-        return true;
     }
 
     public boolean allIn() {
         int money = user.getMoney();
         user.betMoney(money);
-        Round.setBasicBet(money);
         user.setState(User.State.ALLIN);
         return true;
     }

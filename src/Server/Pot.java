@@ -25,4 +25,9 @@ public class Pot {
     public boolean getClosed(){
         return closed;
     }
+    public void addIfNew(User user) {
+        if (!potUser.contains(user)) {
+            potUser.add(user);
+        }
+    }
 }

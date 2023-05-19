@@ -6,7 +6,7 @@ import java.net.Socket;
 
 public class User { // 플레이어의 정보가 담긴 클래스
     enum State {
-        LIVE, FOLD, CALL, RAISE, ALLIN, CHECK,DEPLETED
+        LIVE, FOLD, CALL, RAISE, ALLIN, CHECK, DEPLETED
     }
 
     Hand hand;
@@ -84,32 +84,35 @@ public class User { // 플레이어의 정보가 담긴 클래스
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            if (command != null) {
-                if (noBet) {
-                    if (command.startsWith("/bet")) {
+            if (command != null) {  // 입력이 됐으면
+                if (noBet) { // 아무도 배팅을 안한 상태
+                    if (command.startsWith("/bet")) { // 배팅
                         String[] parts = command.split(" ");
                         if (parts.length == 2) {
                             int betMoney = Integer.parseInt(parts[1]);
                             result = bet.bet(betMoney);
                             if (!result) command = null;
                             else break;
+                        } else {
+                            sendMessage("Wrong Input");
+                            command = null;
                         }
-                    } else if (command.startsWith("/fold")) {
-                        result = bet.fold();
+                    } else if (command.startsWith("/fold")) { // 폴드
+                        bet.fold();
                         break;
-                    } else if (command.startsWith("/check")) {
+                    } else if (command.startsWith("/check")) { // 체크
                         break;
                     } else {
                         sendMessage("Wrong Choice");
                         result = false;
                         command = null;
                     }
-                } else {
-                    if (command.startsWith("/call")) {
+                } else {    // 누가 배팅한 상태 -> 콜하거나 레이즈 혹은 폴드
+                    if (command.startsWith("/call")) { // 콜
                         result = bet.call(basicBet - currentBet); // 기본 배팅 - 나의 배팅금
                         if (!result) command = null;
                         else break;
-                    } else if (command.startsWith("/raise")) {
+                    } else if (command.startsWith("/raise")) { // 레이즈
                         String[] parts = command.split(" ");
                         if (parts.length == 2) {
                             int raiseMoney = Integer.parseInt(parts[1]);
@@ -117,9 +120,13 @@ public class User { // 플레이어의 정보가 담긴 클래스
                             if (!result) command = null;
                             else break;
                         }
-                    } else if (command.startsWith("/fold")) {
+                    } else if (command.startsWith("/fold")) { // 폴드
                         bet.fold();
                         break;
+                    } else if (command.startsWith("/check")) { // 체크 (빅블라인드만 예외적으로 사용가능)
+                        result = bet.check();
+                        if (!result) command = null;
+                        else break;
                     } else {
                         sendMessage("Wrong Choice");
                         result = false;
@@ -130,7 +137,7 @@ public class User { // 플레이어의 정보가 담긴 클래스
         }
     }
 
-    public void respondToAllIn(boolean result){
+    public void respondToAllIn(boolean result, int basicBet) {
         command = null;
         while (command == null) {
             try {
@@ -140,17 +147,34 @@ public class User { // 플레이어의 정보가 담긴 클래스
             }
             if (command != null) {
                 if (result) {
-                    if(command.startsWith("/allin")){
-                        bet.allIn(); break;
-                    }else if(command.startsWith("fold")){
-                        bet.fold(); break;
-                    }else{
+                    if (command.startsWith("/allin")) {
+                        bet.allIn();
+                        break;
+                    } else if (command.startsWith("fold")) {
+                        bet.fold();
+                        break;
+                    } else {
                         sendMessage("Wrong Choice");
                         command = null;
                     }
-                }
-                else{
-
+                } else {
+                    if (command.startsWith("/call")) {
+                        result = bet.call(basicBet - currentBet); // 기본 배팅 - 나의 배팅금
+                        if (!result) command = null;
+                        else break;
+                    }
+                    else if(command.startsWith("/fold")){
+                        bet.fold();break;
+                    }
+                    else if(command.startsWith("/raise")){
+                        String[] parts = command.split(" ");
+                        if (parts.length == 2) {
+                            int raiseMoney = Integer.parseInt(parts[1]);
+                            result = bet.raise(raiseMoney, currentBet, basicBet);
+                            if (!result) command = null;
+                            else break;
+                        }
+                    }
                 }
             }
         }
