@@ -1,10 +1,12 @@
 package Server;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Round {
     List<User> users;
-    List<Pot> pots;
+    List<Pot> pots = new ArrayList<>();
     static int basicBet;
     private final int baseBet;
     static int currentUserIndex;
@@ -14,31 +16,36 @@ public class Round {
     public Round(List<User> users, int baseBet) {
         this.users = users;
         pots.add(new Pot());
-        currentUserIndex = 3;
+        if (users.size() == 2) currentUserIndex = 0;
+        else currentUserIndex = 3;
         this.baseBet = baseBet;
         this.userCount = users.size();
     }
 
-    public void smallBlind() { // 시작 강제 베팅
-        User user = users.get(1);
+    public void smallBlind() throws IOException { // 시작 강제 베팅
+        User user;
+        if (userCount == 2) user = users.get(0);
+        else user = users.get(1);
         user.sendMessage("You are Small Blind!! Basic Betting >> 2");
         user.betMoney(baseBet / 2);
         pots.get(0).plusPot(baseBet / 2, user);
     }
 
-    public void bigBlind() {
-        User user = users.get(2);
+    public void bigBlind() throws IOException {
+        User user;
+        if (userCount == 2) user = users.get(1);
+        else user = users.get(2);
         user.sendMessage("You are Big Blind!! Basic Betting >> 4");
         user.betMoney(baseBet);
         pots.get(0).plusPot(baseBet, user);
     }
 
-    public void freeFlop() { // 개인 카드 2장 분배 후 첫 배팅
+    public void freeFlop() throws IOException { // 개인 카드 2장 분배 후 첫 배팅
         basicBet = baseBet;
         playRound();
     }
 
-    public void flop() { // 테이블 카드 3장 공개 후 2번째 배팅
+    public void flop() throws IOException { // 테이블 카드 3장 공개 후 2번째 배팅
         if (checkRemainUser(users)) {
             basicBet = baseBet;
             noBetting = true;
@@ -47,7 +54,7 @@ public class Round {
         }
     }
 
-    public void turn() { // 4번째 테이블 카드 1장 공개 후 3번째 배팅
+    public void turn() throws IOException { // 4번째 테이블 카드 1장 공개 후 3번째 배팅
         if (checkRemainUser(users)) {
             basicBet = baseBet;
             noBetting = true;
@@ -56,7 +63,7 @@ public class Round {
         }
     }
 
-    public void river() { // 5번째 테이블 카드 1장 공개 후 마지막 배팅
+    public void river() throws IOException { // 5번째 테이블 카드 1장 공개 후 마지막 배팅
         if (checkRemainUser(users)) {
             basicBet = baseBet;
             noBetting = true;
@@ -66,7 +73,7 @@ public class Round {
         }
     }
 
-    public void playRound() {
+    public void playRound() throws IOException {
         int turn = 0;
         int allinMoney = 0;
         boolean allin = false;
@@ -150,6 +157,7 @@ public class Round {
     public static void setBasicBet(int money) {
         basicBet = money;
     }
+
     public int findIfSBFold() {
         int idx = 1;
         while (users.get(idx).getState() == User.State.FOLD) {

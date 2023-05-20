@@ -16,12 +16,12 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     int gameCount = 1;
     int baseBet = 4;
     boolean setDealerButton = false;
+    static boolean game = false;
 
 
     public void setUpGame(int port) {
         System.out.println("wait for Users...");
         ExecutorService executorService = Executors.newFixedThreadPool(10);
-        List<User> users = Collections.synchronizedList(new ArrayList<>());
 
 // 클라이언트 연결을 받는 스레드
         Runnable connectionHandler = () -> {
@@ -34,7 +34,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
 
                         User user = new User(clientSocket, receiveName);
                         users.add(user);
-                        System.out.println(user.getName()+ "is joined!");
+                        System.out.println(user.getName()+ " is joined!");
 
                         UserHandler handler = new UserHandler(user, users, this);
                         executorService.submit(handler);
@@ -58,7 +58,12 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                         }
                     }
                     if (allReady) {
-                        sendAll("All users are ready. Starting the game...");
+                        try {
+                            sendAll("All users are ready. Starting the game...");
+                            System.out.println("game is start");
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                         try {
                             gameStart();
                         } catch (IOException | ClassNotFoundException e) {
@@ -67,7 +72,6 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                         for (User user : users) {
                             user.setReady(false);
                         }
-                        break;
                     }
                 }
                 try {
@@ -77,17 +81,19 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                 }
             }
         };
-        new Thread(readyChecker).start();
+        executorService.submit(readyChecker);
 
     }
 
     public void gameStart() throws IOException, ClassNotFoundException {
+        System.out.println("Set Dealer Button");
         if(!setDealerButton) setDealerButton(users);
         if (gameCount == 3) {
             gameCount = 1;
             baseBet *= 2;
         }
         Round round = new Round(users, baseBet);
+        game = true;
         round.smallBlind();
         round.bigBlind();
         givePersonalCard(users);
@@ -113,6 +119,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         for(User user : users){
             sendMsg("/init",user);
         }
+        game = false;
     }
 
     public synchronized User getCurrentUser() {
@@ -266,7 +273,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         return Integer.compare(h1Kicker, h2Kicker);
     }
 
-    public void determineWinners(Pot pot) {
+    public void determineWinners(Pot pot) throws IOException {
         List<User> currentWinners = new ArrayList<>();
         Iterator<User> itr = pot.potUser.iterator();
         User currentUser = itr.next();
@@ -291,7 +298,8 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         }
     }
 
-    private void setDealerButton(List<User> users) {
+    private void setDealerButton(List<User> users) throws IOException {
+        deck.shuffle();
         sendAll("Set Dealer Button");
         Map<Integer, Card> cardMap = new HashMap<>();
         for (int i = 0; i < users.size(); i++) {
@@ -323,11 +331,11 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         users = newOrder;
     }
 
-    public void sendMsg(String message, User user) {
+    public void sendMsg(String message, User user) throws IOException {
         user.sendMessage(message);
     }
 
-    public void sendAll(String message) {
+    public void sendAll(String message) throws IOException {
         for (User user : users) {
             user.sendMessage(message);
         }

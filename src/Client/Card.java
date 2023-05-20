@@ -1,21 +1,8 @@
 package Client;
 
-public class Card { // 카드의 정보가 담길 클래스
-    private final Suit suit;
-    private final Rank rank;
+import java.io.Serializable;
 
-    public Card(Rank rank, Suit suit) {
-        this.rank = rank;
-        this.suit = suit;
-    }
-
-    public Rank rank() {
-        return rank;
-    }
-
-    public Suit suit() {
-        return suit;
-    }
+public record Card(Rank rank, Suit suit) implements Serializable { // 카드의 정보가 담길 클래스
 
     public String showCard() {
         return suit.getName() + rank.getName();

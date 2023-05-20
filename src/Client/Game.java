@@ -1,6 +1,9 @@
 package Client;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,57 +13,69 @@ public class Game {
     Scanner scanner = new Scanner(System.in);
 
     public Game() throws IOException {
-        System.out.print("서버 포트와 IP를 입력 >> ");
-        int port = scanner.nextInt();
-        String ip = scanner.next();
-        openServer(ip, port);
+        //System.out.print("Insert Server IP >> ");
+        int port = 8080;
+        //String ip = scanner.next();
+        access("Localhost", port);
     }
 
     public static void main(String[] args) throws IOException {
         new Game();
     }
 
-    public void openServer(String serverAddress, int port) throws IOException {
+    public void access(String serverAddress, int port) throws IOException {
         Socket socket = new Socket(serverAddress, port);
+        System.out.println("Connect Success!!");
         PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-        MessageReceiver messageReceiver = new MessageReceiver(socket);
-        MessageSender messageSender = new MessageSender(socket);
-        ObjectReceiver objectReceiver = new ObjectReceiver(socket);
-        System.out.print("이름을 입력하세요 >> ");
+        System.out.print("Insert name >> ");
         String name = scanner.next();
         out.println(name);
 
+        MessageReceiver messageReceiver = new MessageReceiver(socket);
+        MessageSender messageSender = new MessageSender(socket);
         Thread messageReceive = new Thread(messageReceiver);
         messageReceive.start();
         Thread messageSend = new Thread(messageSender);
         messageSend.start();
-        Thread objectReceive = new Thread(objectReceiver);
-        objectReceive.start();
         System.out.println("Enter a command /+ready/unready/quit >> ");
     }
 }
 
 class MessageReceiver implements Runnable {
-    private final BufferedReader in;
+    private final ObjectInputStream ois;
+    private final List<Card> cardList = new ArrayList<>();
 
     public MessageReceiver(Socket socket) throws IOException {
-        this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        this.ois = new ObjectInputStream(socket.getInputStream());
     }
 
     @Override
     public void run() {
-        String message;
-        try {
-            while ((message = in.readLine()) != null) {
-                if (message.startsWith("/init")) {
-                    ObjectReceiver.cardList.clear();
-                } else System.out.println(message);
+        Object obj;
+        while (true) {
+            try {
+                obj = ois.readObject();
+                if (obj == null) break;
+                if (obj instanceof Card) {
+                    Card card = (Card) obj;
+                    cardList.add(card);
+                    System.out.println(card);
+                } else if (obj instanceof String) {
+                    String message = (String) obj;
+                    if (message.startsWith("/init")) {
+                        cardList.clear();
+                    } else {
+                        System.out.println(message);
+                    }
+                }
+            } catch (IOException | ClassNotFoundException e) {
+                System.out.println("Connection lost");
+                break;
             }
-        } catch (IOException e) {
-            System.out.println("Connection lost");
         }
     }
 }
+
 
 class MessageSender implements Runnable {
     Scanner scanner = new Scanner(System.in);
@@ -87,40 +102,8 @@ class MessageSender implements Runnable {
                 break;
             }
             out.println(message);
+            if(socket.isClosed()) break;
         }
     }
 }
 
-class ObjectReceiver implements Runnable {
-    private final ObjectInputStream ois;
-    private final Socket socket;
-    static final List<Card> cardList = new ArrayList<>();
-
-    public ObjectReceiver(Socket socket) throws IOException {
-        this.socket = socket;
-        InputStream is = socket.getInputStream();
-        this.ois = new ObjectInputStream(is);
-    }
-
-    @Override
-    public void run() {
-        Card card;
-        while (true) {
-            try {
-                if ((card = (Card) ois.readObject()) == null) break;
-            } catch (IOException | ClassNotFoundException e) {
-                throw new RuntimeException(e);
-            }
-            cardList.add(card);
-            System.out.println(card);
-        }
-    }
-
-//    public void sendAck(String message) throws IOException {
-//        OutputStream os = socket.getOutputStream();
-//        ObjectOutputStream oos = new ObjectOutputStream(os);
-//
-//        oos.writeObject(message);
-//        oos.flush();
-//    }
-}

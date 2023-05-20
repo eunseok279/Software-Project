@@ -1,6 +1,8 @@
 package Server;
 
-public class Card { // 카드의 정보가 담길 클래스
+import java.io.Serializable;
+
+public class Card implements Serializable { // 카드의 정보가 담길 클래스
     private Suit suit;
     private Rank rank;
 

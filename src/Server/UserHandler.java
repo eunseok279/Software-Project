@@ -20,28 +20,30 @@ public class UserHandler implements Runnable {
 
     @Override
     public void run() {
+        String message = " ";
         try {
-            String message;
-            while ((message = in.readLine()) != null) {
-                User currentUser = dealer.getCurrentUser();
+            while (true) {
+                message = in.readLine();
                 if (message.startsWith("/")) {
                     if (message.startsWith("/quit")) {
-                        System.out.println("연결이 끊어졌습니다: " + user.getName());
-                        sendAll(user.getName() + "님의 연결이 끊어졌습니다.");
+                        System.out.println("Connection Lost >> " + user.getName());
+                        sendAll(user.getName() + "'s Connection Lost");
                         break;
-                    }
-                    else if (message.startsWith("/ready")) {
+                    } else if (message.startsWith("/ready")) {
                         user.setReady(true);
                         sendAll(user.getName() + " is ready");
                         System.out.println(user.getName() + " is ready");
-                    } else if (message.equals("/unready")) {
+                    } else if (message.startsWith("/unready")) {
                         user.setReady(false);
                         sendAll(user.getName() + " is unready");
                         System.out.println(user.getName() + " is unready");
                     }
-                    if (user.equals(currentUser)) {
-                        handleCommand(message);
-                    } else user.sendMessage(currentUser.getName() + "'s turn");
+                    if (Dealer.game) {
+                        User currentUser = dealer.getCurrentUser();
+                        if (user.equals(currentUser)) {
+                            handleCommand(message);
+                        } else user.sendMessage(currentUser.getName() + "'s turn");
+                    }
                 } else {
                     handleChat(message);
                 }
@@ -59,16 +61,16 @@ public class UserHandler implements Runnable {
     }
 
     private void handleCommand(String command) throws IOException {
-        do{
+        do {
             user.setCommand(command);
-        } while(!user.getResult());
+        } while (!user.getResult());
     }
 
-    private void handleChat(String message) {
-        sendAll("["+user.getName()+"] >> "+message);
+    private void handleChat(String message) throws IOException {
+        sendAll("[" + user.getName() + "] >> " + message);
     }
 
-    private void sendAll(String message) {
+    private void sendAll(String message) throws IOException {
         for (User user : users) {
             user.sendMessage(message);
         }

@@ -1,5 +1,7 @@
 package Server;
 
+import java.io.IOException;
+
 public class Bet { // 배팅 방식
     User user;
 
@@ -8,7 +10,7 @@ public class Bet { // 배팅 방식
         int betting = user.getCurrentBet();
     }
 
-    public boolean bet(int betMoney) { // 각 라운드 첫 배팅(프리플랍 제외)
+    public boolean bet(int betMoney) throws IOException { // 각 라운드 첫 배팅(프리플랍 제외)
         if (betMoney > user.getMoney()) { // 배팅금 > 소지금
             user.sendMessage("Not Enough Money!!");
             return false;
@@ -27,7 +29,7 @@ public class Bet { // 배팅 방식
         return true;
     }
 
-    public boolean call(int callMoney) { // 앞 사람의 배팅금을 콜
+    public boolean call(int callMoney) throws IOException { // 앞 사람의 배팅금을 콜
         if (callMoney > user.getMoney()) { // 콜 > 소지금 -> 폴드 혹은 allin
             user.sendMessage("Not Enough Money!! You Should All-In or Fold");
             return false;
@@ -44,7 +46,7 @@ public class Bet { // 배팅 방식
         return true;
     }
 
-    public boolean raise(int raiseMoney, int currentBet, int basicBet) { // 앞 사람의 레이즈
+    public boolean raise(int raiseMoney, int currentBet, int basicBet) throws IOException { // 앞 사람의 레이즈
         int minimumRaise = 2*(basicBet - currentBet); // 기본 배팅금 - 나의 배팅금의 두배
         if (raiseMoney  < minimumRaise) { // 민레이즈
             user.sendMessage("Minimum raise is >> " + minimumRaise);
@@ -81,7 +83,7 @@ public class Bet { // 배팅 방식
         return true;
     }
 
-    public boolean check() { // 턴을 넘긴다 배팅x
+    public boolean check() throws IOException { // 턴을 넘긴다 배팅x
         if (user.getCurrentBet() < Round.basicBet) { // 현재 배팅금 < 기본 배팅금 -> 콜
             user.sendMessage("You Can't Check!");
             return false;

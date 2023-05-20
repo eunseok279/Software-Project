@@ -1,6 +1,7 @@
 package Server;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
 
 public class User { // 플레이어의 정보가 담긴 클래스
@@ -11,12 +12,11 @@ public class User { // 플레이어의 정보가 담긴 클래스
     Hand hand;
     Bet bet;
     private final String name;
-    private int money;
+    private int money = 200;
     private int currentBet = 0;
     private State state;
     private boolean ready;
     private final Socket socket;
-    private final PrintWriter out;
     private final ObjectOutputStream oos;
     private String command;
     private boolean result;
@@ -27,9 +27,7 @@ public class User { // 플레이어의 정보가 담긴 클래스
         this.name = name;
         this.ready = false;
         this.state = State.LIVE;
-        this.out = new PrintWriter(socket.getOutputStream(), true);
-        OutputStream os = socket.getOutputStream();
-        this.oos = new ObjectOutputStream(os);
+        this.oos = new ObjectOutputStream(socket.getOutputStream());
         bet = new Bet(this);
         hand = new Hand();
     }
@@ -71,12 +69,14 @@ public class User { // 플레이어의 정보가 담긴 클래스
         return socket;
     }
 
-    public void sendMessage(String message) {
-        out.println(message);
+    public void sendMessage(String message) throws IOException {
+        oos.writeObject(message);
+        oos.flush();
     }
 
     public void sendCardObject(Card card) throws IOException {
         oos.writeObject(card);
+        oos.flush();
     }
 
 //    public String receiveAck() throws IOException, ClassNotFoundException {
@@ -91,7 +91,7 @@ public class User { // 플레이어의 정보가 담긴 클래스
 //        return ack;
 //    }
 
-    public void chooseBetAction(int basicBet, boolean noBet) { // basicBet = 앞 사람의 배팅금
+    public void chooseBetAction(int basicBet, boolean noBet) throws IOException { // basicBet = 앞 사람의 배팅금
         command = null;                  // currentBet = 현재 내놓은 배팅금
         while (command == null) {
             try {
@@ -152,7 +152,7 @@ public class User { // 플레이어의 정보가 담긴 클래스
         }
     }
 
-    public void respondToAllIn(boolean result, int basicBet) {
+    public void respondToAllIn(boolean result, int basicBet) throws IOException {
         command = null;
         while (command == null) {
             try {
