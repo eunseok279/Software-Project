@@ -10,15 +10,14 @@ public class User { // 플레이어의 정보가 담긴 클래스
 
     Hand hand;
     Bet bet;
-    private String name;
+    private final String name;
     private int money;
     private int currentBet = 0;
     private State state;
     private boolean ready;
-    private Socket socket;
-    private PrintWriter out;
-    private OutputStream os;
-    private ObjectOutputStream oos;
+    private final Socket socket;
+    private final PrintWriter out;
+    private final ObjectOutputStream oos;
     private String command;
     private boolean result;
 
@@ -29,7 +28,7 @@ public class User { // 플레이어의 정보가 담긴 클래스
         this.ready = false;
         this.state = State.LIVE;
         this.out = new PrintWriter(socket.getOutputStream(), true);
-        this.os = socket.getOutputStream();
+        OutputStream os = socket.getOutputStream();
         this.oos = new ObjectOutputStream(os);
         bet = new Bet(this);
         hand = new Hand();
@@ -37,10 +36,6 @@ public class User { // 플레이어의 정보가 담긴 클래스
 
     public String getName() {
         return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public State getState() {
@@ -80,23 +75,21 @@ public class User { // 플레이어의 정보가 담긴 클래스
         out.println(message);
     }
 
-    public boolean sendCardObject(Card card) throws IOException, ClassNotFoundException {
+    public void sendCardObject(Card card) throws IOException {
         oos.writeObject(card);
-        String ack = receiveAck();
-        return ack.equals("ACK");
     }
 
-    public String receiveAck() throws IOException, ClassNotFoundException {
-        InputStream is = socket.getInputStream();
-
-        // ObjectInputStream을 생성한다.
-        ObjectInputStream ois = new ObjectInputStream(is);
-
-        // 클라이언트로부터 메시지를 받는다.
-        String ack = (String) ois.readObject();
-
-        return ack;
-    }
+//    public String receiveAck() throws IOException, ClassNotFoundException {
+//        InputStream is = socket.getInputStream();
+//
+//        // ObjectInputStream을 생성한다.
+//        ObjectInputStream ois = new ObjectInputStream(is);
+//
+//        // 클라이언트로부터 메시지를 받는다.
+//        String ack = (String) ois.readObject();
+//
+//        return ack;
+//    }
 
     public void chooseBetAction(int basicBet, boolean noBet) { // basicBet = 앞 사람의 배팅금
         command = null;                  // currentBet = 현재 내놓은 배팅금

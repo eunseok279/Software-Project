@@ -42,7 +42,6 @@ public class Game {
 
 class MessageReceiver implements Runnable {
     private final BufferedReader in;
-    private List<Card> cardList;
 
     public MessageReceiver(Socket socket) throws IOException {
         this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -112,21 +111,16 @@ class ObjectReceiver implements Runnable {
             } catch (IOException | ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
-            try {
-                sendAck("ACK");
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
             cardList.add(card);
             System.out.println(card);
         }
     }
 
-    public void sendAck(String message) throws IOException {
-        OutputStream os = socket.getOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(os);
-
-        oos.writeObject(message);
-        oos.flush();
-    }
+//    public void sendAck(String message) throws IOException {
+//        OutputStream os = socket.getOutputStream();
+//        ObjectOutputStream oos = new ObjectOutputStream(os);
+//
+//        oos.writeObject(message);
+//        oos.flush();
+//    }
 }

@@ -1,8 +1,8 @@
 package Client;
 
 public class Card { // 카드의 정보가 담길 클래스
-    private Suit suit;
-    private Rank rank;
+    private final Suit suit;
+    private final Rank rank;
 
     public Card(Rank rank, Suit suit) {
         this.rank = rank;
@@ -39,7 +39,7 @@ enum Rank {
 }
 
 enum Suit {
-    CLUBS("\u2663"), DIAMONDS("\u25C6"), HEARTS("\u2665"), SPADES("\u2660");
+    CLUBS("♣"), DIAMONDS("◆"), HEARTS("♥"), SPADES("♠");
 
     private final String name;
 
