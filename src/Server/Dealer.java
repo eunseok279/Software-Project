@@ -10,13 +10,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
-    Pot pot;
     List<Card> tableCard = new ArrayList<>(); // table 있는 패
     Deck deck = new Deck();
     List<User> users = Collections.synchronizedList(new ArrayList<>());
-    List<User> winners;
     int gameCount = 1;
     int baseBet = 4;
+    boolean setDealerButton = false;
 
 
     public void setUpGame(int port) {
@@ -61,7 +60,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                         sendAll("All users are ready. Starting the game...");
                         try {
                             gameStart();
-                        } catch (IOException e) {
+                        } catch (IOException | ClassNotFoundException e) {
                             throw new RuntimeException(e);
                         }
                         for (User user : users) {
@@ -81,20 +80,22 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
 
     }
 
-    public void gameStart() throws IOException {
+    public void gameStart() throws IOException, ClassNotFoundException {
+        if(!setDealerButton) setDealerButton(users);
         if (gameCount == 3) {
             gameCount = 1;
             baseBet *= 2;
         }
-        setDealerButton(users);
         Round round = new Round(users, baseBet);
         round.smallBlind();
         round.bigBlind();
-        for (User user : users)
-            getPersonalCard(user.hand.cards);
+        givePersonalCard(users);
         round.freeFlop(); // 빅블라인드 다음 사람부터 시작
+        addCard(3);
         round.flop();
+        addCard(1);
         round.turn();
+        addCard(1);
         round.river();
         for (User user : users)
             if (user.getMoney() < baseBet) {
@@ -102,25 +103,40 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                 user.getSocket().close();
                 users.remove(user);
             }
-        if (users.size() == 1) sendMsg("Winner of Winner is you! Congratulation", users.get(0));
         gameCount++;
+        for(int i = 0;i<round.pots.size();i++) {
+            Pot pot = round.pots.get(i);
+            determineWinners(pot);
+        }
+        deck.initCard();
+        for(User user : users){
+            sendMsg("/init",user);
+        }
     }
 
     public synchronized User getCurrentUser() {
         return users.get(Round.currentUserIndex);
     }
 
-    public void getPersonalCard(List<Card> cards) {
-        for (int i = 0; i < 2; i++) {
-            cards.add(deck.drawCard());
-        }
+    public void givePersonalCard(List<User>users) throws IOException, ClassNotFoundException {
+        for (int i = 0; i < 2; i++)
+            for (User user : users) {
+                Card card = deck.drawCard();
+                user.hand.cards.add(card);
+                user.sendCardObject(card);
+            }
     }
 
-    public void addCard(Card card) {
-        tableCard.add(card);
+    public void addCard(int count) throws IOException, ClassNotFoundException {
+        for(int i = 0 ;i<count;i++) {
+            Card card = deck.drawCard();
 
-        for (User user : users)
-            user.hand.cards.add(card);
+            tableCard.add(card);
+            for (User user : users) {
+                user.hand.cards.add(card);
+                user.sendCardObject(card);
+            }
+        }
     }
 
     public int compareHands(User p1, User p2) {
@@ -249,12 +265,14 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         return Integer.compare(h1Kicker, h2Kicker);
     }
 
-    public List<User> determineWinners(List<User> users) {
+    public void determineWinners(Pot pot) {
         List<User> currentWinners = new ArrayList<>();
-        currentWinners.add(users.get(0)); //1번 플레이어
+        Iterator<User> itr = pot.potUser.iterator();
+        User currentUser = itr.next();
+        currentWinners.add(currentUser);
 
-        for (int i = 1; i < users.size(); i++) { // 234 플레이어
-            User currentUser = users.get(i);
+        while(itr.hasNext()) {
+            currentUser = itr.next();
             int comparisonResult = compareHands(currentWinners.get(0), currentUser);
 
             if (comparisonResult < 0) { // 현재 플레이어를 다른 플레이어가 이긴 경우
@@ -264,7 +282,12 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                 currentWinners.add(currentUser);
             }
         }
-        return currentWinners;
+
+        for(User user : currentWinners){
+            user.sendMessage("Winner!!");
+            int money = pot.getPotMoney()/currentWinners.size();
+            user.plusMoney(money);
+        }
     }
 
     private void setDealerButton(List<User> users) {
@@ -285,9 +308,10 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         initUserCard();
         deck.initCard();
         deck.shuffle();
+        setDealerButton = true;
     }
 
-    public List<User> rearrangeOrder(List<User> userOrder, int dealerButtonIndex) {
+    public void rearrangeOrder(List<User> userOrder, int dealerButtonIndex) {
         List<User> newOrder = new ArrayList<>();
         for (int i = dealerButtonIndex; i < userOrder.size(); i++) {
             newOrder.add(userOrder.get(i));
@@ -295,7 +319,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         for (int i = 0; i < dealerButtonIndex; i++) {
             newOrder.add(userOrder.get(i));
         }
-        return newOrder;
+        users = newOrder;
     }
 
     public void sendMsg(String message, User user) {

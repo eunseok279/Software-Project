@@ -1,7 +1,6 @@
 package Server;
 
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 
 public class User { // 플레이어의 정보가 담긴 클래스
@@ -18,8 +17,11 @@ public class User { // 플레이어의 정보가 담긴 클래스
     private boolean ready;
     private Socket socket;
     private PrintWriter out;
+    private OutputStream os;
+    private ObjectOutputStream oos;
     private String command;
     private boolean result;
+
 
     public User(Socket socket, String name) throws IOException {
         this.socket = socket;
@@ -27,6 +29,8 @@ public class User { // 플레이어의 정보가 담긴 클래스
         this.ready = false;
         this.state = State.LIVE;
         this.out = new PrintWriter(socket.getOutputStream(), true);
+        this.os = socket.getOutputStream();
+        this.oos = new ObjectOutputStream(os);
         bet = new Bet(this);
         hand = new Hand();
     }
@@ -74,6 +78,24 @@ public class User { // 플레이어의 정보가 담긴 클래스
 
     public void sendMessage(String message) {
         out.println(message);
+    }
+
+    public boolean sendCardObject(Card card) throws IOException, ClassNotFoundException {
+        oos.writeObject(card);
+        String ack = receiveAck();
+        return ack.equals("ACK");
+    }
+
+    public String receiveAck() throws IOException, ClassNotFoundException {
+        InputStream is = socket.getInputStream();
+
+        // ObjectInputStream을 생성한다.
+        ObjectInputStream ois = new ObjectInputStream(is);
+
+        // 클라이언트로부터 메시지를 받는다.
+        String ack = (String) ois.readObject();
+
+        return ack;
     }
 
     public void chooseBetAction(int basicBet, boolean noBet) { // basicBet = 앞 사람의 배팅금
@@ -162,11 +184,10 @@ public class User { // 플레이어의 정보가 담긴 클래스
                         result = bet.call(basicBet - currentBet); // 기본 배팅 - 나의 배팅금
                         if (!result) command = null;
                         else break;
-                    }
-                    else if(command.startsWith("/fold")){
-                        bet.fold();break;
-                    }
-                    else if(command.startsWith("/raise")){
+                    } else if (command.startsWith("/fold")) {
+                        bet.fold();
+                        break;
+                    } else if (command.startsWith("/raise")) {
                         String[] parts = command.split(" ");
                         if (parts.length == 2) {
                             int raiseMoney = Integer.parseInt(parts[1]);

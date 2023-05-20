@@ -1,14 +1,15 @@
 package Server;
 
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Pot {
     private int potMoney;
-    private boolean closed = false;
-    List<User> potUser;
+    Set<User> potUser;
 
     public Pot() {
         potMoney = 0;
+        potUser = new HashSet<>();
     }
 
     public void plusPot(int money,User user) {
@@ -18,16 +19,5 @@ public class Pot {
 
     public int getPotMoney() {
         return potMoney;
-    }
-    public void setClosed(){
-        this.closed =true;
-    }
-    public boolean getClosed(){
-        return closed;
-    }
-    public void addIfNew(User user) {
-        if (!potUser.contains(user)) {
-            potUser.add(user);
-        }
     }
 }
