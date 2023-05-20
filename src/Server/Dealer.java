@@ -19,6 +19,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
 
 
     public void setUpGame(int port) {
+        System.out.println("wait for Users...");
         ExecutorService executorService = Executors.newFixedThreadPool(10);
         List<User> users = Collections.synchronizedList(new ArrayList<>());
 
@@ -28,12 +29,12 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                 try (ServerSocket serverSocket = new ServerSocket(port)) {
                     if (users.size() < 6) {
                         Socket clientSocket = serverSocket.accept();
-
                         BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                         String receiveName = in.readLine();
 
                         User user = new User(clientSocket, receiveName);
                         users.add(user);
+                        System.out.println(user.getName()+ "is joined!");
 
                         UserHandler handler = new UserHandler(user, users, this);
                         executorService.submit(handler);

@@ -33,9 +33,11 @@ public class UserHandler implements Runnable {
                     else if (message.startsWith("/ready")) {
                         user.setReady(true);
                         sendAll(user.getName() + " is ready");
+                        System.out.println(user.getName() + " is ready");
                     } else if (message.equals("/unready")) {
                         user.setReady(false);
                         sendAll(user.getName() + " is unready");
+                        System.out.println(user.getName() + " is unready");
                     }
                     if (user.equals(currentUser)) {
                         handleCommand(message);
