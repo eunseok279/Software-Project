@@ -2,7 +2,7 @@ package Server;
 
 import java.io.IOException;
 
-public class Bet { // ¹èÆÃ ¹æ½Ä
+public class Bet { // ë°°íŒ… ë°©ì‹
     User user;
 
     public Bet(User user) {
@@ -10,8 +10,8 @@ public class Bet { // ¹èÆÃ ¹æ½Ä
         int betting = user.getCurrentBet();
     }
 
-    public boolean bet(int betMoney) throws IOException { // °¢ ¶ó¿îµå Ã¹ ¹èÆÃ(ÇÁ¸®ÇÃ¶ø Á¦¿Ü)
-        if (betMoney > user.getMoney()) { // ¹èÆÃ±İ > ¼ÒÁö±İ
+    public boolean bet(int betMoney) throws IOException { // ê° ë¼ìš´ë“œ ì²« ë°°íŒ…(í”„ë¦¬í”Œë ì œì™¸)
+        if (betMoney > user.getMoney()) { // ë°°íŒ…ê¸ˆ > ì†Œì§€ê¸ˆ
             user.sendMessage("Not Enough Money!!");
             return false;
         }
@@ -19,25 +19,25 @@ public class Bet { // ¹èÆÃ ¹æ½Ä
             user.sendMessage("All-In");
             return allIn();
         }
-        if (betMoney < Round.basicBet) { // ¹èÆÃ±İ < ÃÖ¼Ò ¹èÆÃ
+        if (betMoney < Round.basicBet) { // ë°°íŒ…ê¸ˆ < ìµœì†Œ ë°°íŒ…
             user.sendMessage("Minimum is >> " + Round.basicBet);
             return false;
         }
         user.betMoney(betMoney);
-        Round.setBasicBet(betMoney); // Ã¹ ¹èÆÃ => ÃÖ¼Ò ¹èÆÃ±İ
+        Round.setBasicBet(betMoney); // ì²« ë°°íŒ… => ìµœì†Œ ë°°íŒ…ê¸ˆ
         user.setState(User.State.RAISE);
         return true;
     }
 
-    public boolean call(int callMoney) throws IOException { // ¾Õ »ç¶÷ÀÇ ¹èÆÃ±İÀ» Äİ
-        if (callMoney > user.getMoney()) { // Äİ > ¼ÒÁö±İ -> Æúµå È¤Àº allin
+    public boolean call(int callMoney) throws IOException { // ì• ì‚¬ëŒì˜ ë°°íŒ…ê¸ˆì„ ì½œ
+        if (callMoney > user.getMoney()) { // ì½œ > ì†Œì§€ê¸ˆ -> í´ë“œ í˜¹ì€ allin
             user.sendMessage("Not Enough Money!! You Should All-In or Fold");
             return false;
-        } else if (callMoney == user.getMoney()) { // Äİ = ¼ÒÁö±İ -> ¿ÃÀÎ
+        } else if (callMoney == user.getMoney()) { // ì½œ = ì†Œì§€ê¸ˆ -> ì˜¬ì¸
             user.sendMessage("All-In");
             return allIn();
         }
-        if (callMoney == 0) { // ±âº» ¹èÆÃ±İ = ¹èÆÃ±İ -> Ã¼Å©
+        if (callMoney == 0) { // ê¸°ë³¸ ë°°íŒ…ê¸ˆ = ë°°íŒ…ê¸ˆ -> ì²´í¬
             user.sendMessage("Check");
             return check();
         }
@@ -46,28 +46,28 @@ public class Bet { // ¹èÆÃ ¹æ½Ä
         return true;
     }
 
-    public boolean raise(int raiseMoney, int currentBet, int basicBet) throws IOException { // ¾Õ »ç¶÷ÀÇ ·¹ÀÌÁî
-        int minimumRaise = 2*(basicBet - currentBet); // ±âº» ¹èÆÃ±İ - ³ªÀÇ ¹èÆÃ±İÀÇ µÎ¹è
-        if (raiseMoney  < minimumRaise) { // ¹Î·¹ÀÌÁî
+    public boolean raise(int raiseMoney, int currentBet, int basicBet) throws IOException { // ì• ì‚¬ëŒì˜ ë ˆì´ì¦ˆ
+        int minimumRaise = 2*(basicBet - currentBet); // ê¸°ë³¸ ë°°íŒ…ê¸ˆ - ë‚˜ì˜ ë°°íŒ…ê¸ˆì˜ ë‘ë°°
+        if (raiseMoney  < minimumRaise) { // ë¯¼ë ˆì´ì¦ˆ
             user.sendMessage("Minimum raise is >> " + minimumRaise);
             return false;
         }
-        if (raiseMoney > user.getMoney()) { // ¹èÆÃ±İ > ¼ÒÁö±İ
+        if (raiseMoney > user.getMoney()) { // ë°°íŒ…ê¸ˆ > ì†Œì§€ê¸ˆ
             user.sendMessage("Not Enough Money!!");
             return false;
-        } else if (raiseMoney == user.getMoney()) { // ¹èÆÃ±İ = ¼ÒÁö±İ -> ¿ÃÀÎ
+        } else if (raiseMoney == user.getMoney()) { // ë°°íŒ…ê¸ˆ = ì†Œì§€ê¸ˆ -> ì˜¬ì¸
             user.sendMessage("All In");
             return allIn();
         }
-        if (raiseMoney + currentBet < basicBet) { // ÀüÃ¼ ¹èÆÃ±İ < ±âº» ¹èÆÃ±İ
+        if (raiseMoney + currentBet < basicBet) { // ì „ì²´ ë°°íŒ…ê¸ˆ < ê¸°ë³¸ ë°°íŒ…ê¸ˆ
             user.sendMessage("Minimum Betting >> " + basicBet);
             return false;
-        } else if (raiseMoney + currentBet == basicBet) { // ÀüÃ¼ ¹èÆÃ±İ == ±âº» ¹èÆÃ±İ -> Äİ
+        } else if (raiseMoney + currentBet == basicBet) { // ì „ì²´ ë°°íŒ…ê¸ˆ == ê¸°ë³¸ ë°°íŒ…ê¸ˆ -> ì½œ
             user.sendMessage("Call");
             return call(raiseMoney);
         }
         user.betMoney(raiseMoney);
-        Round.setBasicBet(user.getCurrentBet()); // ·¹ÀÌÁî¿¡ ¼º°øÇÏ¸é ±âº» ¹èÆÃ±İ = ÀüÃ¼ ¹èÆÃ±İ
+        Round.setBasicBet(user.getCurrentBet()); // ë ˆì´ì¦ˆì— ì„±ê³µí•˜ë©´ ê¸°ë³¸ ë°°íŒ…ê¸ˆ = ì „ì²´ ë°°íŒ…ê¸ˆ
         user.setState(User.State.RAISE);
         return true;
     }
@@ -83,8 +83,8 @@ public class Bet { // ¹èÆÃ ¹æ½Ä
         return true;
     }
 
-    public boolean check() throws IOException { // ÅÏÀ» ³Ñ±ä´Ù ¹èÆÃx
-        if (user.getCurrentBet() < Round.basicBet) { // ÇöÀç ¹èÆÃ±İ < ±âº» ¹èÆÃ±İ -> Äİ
+    public boolean check() throws IOException { // í„´ì„ ë„˜ê¸´ë‹¤ ë°°íŒ…x
+        if (user.getCurrentBet() < Round.basicBet) { // í˜„ì¬ ë°°íŒ…ê¸ˆ < ê¸°ë³¸ ë°°íŒ…ê¸ˆ -> ì½œ
             user.sendMessage("You Can't Check!");
             return false;
         }

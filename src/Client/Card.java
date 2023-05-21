@@ -1,6 +1,6 @@
 package Client;
 
-public record Card(Rank rank, Suit suit)  { // Ä«µåÀÇ Á¤º¸°¡ ´ã±æ Å¬·¡½º
+public record Card(Rank rank, Suit suit)  { // ì¹´ë“œì˜ ì •ë³´ê°€ ë‹´ê¸¸ í´ë˜ìŠ¤
 
     public String showCard() {
         return suit.getName() + rank.getName();
@@ -24,7 +24,7 @@ enum Rank {
 }
 
 enum Suit {
-    CLUBS("¢À"), DIAMONDS("¡ß"), HEARTS("¢¾"), SPADES("¢¼");
+    CLUBS("â™£"), DIAMONDS("â—†"), HEARTS("â™¥"), SPADES("â™ ");
 
     private final String name;
 

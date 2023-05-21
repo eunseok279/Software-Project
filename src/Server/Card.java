@@ -2,7 +2,7 @@ package Server;
 
 import java.io.Serializable;
 
-public class Card implements Serializable { // Ä«µåÀÇ Á¤º¸°¡ ´ã±æ Å¬·¡½º
+public class Card implements Serializable { // ì¹´ë“œì˜ ì •ë³´ê°€ ë‹´ê¸¸ í´ë˜ìŠ¤
     private Suit suit;
     private Rank rank;
 

@@ -37,6 +37,8 @@ public class Game {
         messageReceive.start();
         Thread messageSend = new Thread(messageSender);
         messageSend.start();
+        Thread objectReceive =new Thread(objectReceiver);
+        objectReceive.start();
         System.out.println("Enter a command /+ready/unready/quit >> ");
     }
 }
