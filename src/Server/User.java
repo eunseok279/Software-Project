@@ -2,6 +2,7 @@ package Server;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
 import java.net.Socket;
 
 public class User { // 플레이어의 정보가 담긴 클래스
@@ -12,25 +13,35 @@ public class User { // 플레이어의 정보가 담긴 클래스
     Hand hand;
     Bet bet;
     private final String name;
-    private int money = 200;
+    private int money;
     private int currentBet = 0;
     private State state;
-    private boolean ready;
+    private boolean ready = false;
     private final Socket socket;
-    private final ObjectOutputStream oos;
+    ObjectOutputStream oos;
+    PrintWriter out;
     private String command;
     private boolean result;
 
+    public User(Socket socket, String name, int money) throws IOException {
+        this(socket, name);
+        this.state = State.LIVE;
+        this.money = money;
+        this.oos= new ObjectOutputStream(new ObjectOutputStream(socket.getOutputStream()));
+        this.out = new PrintWriter(socket.getOutputStream(), true);
+        bet = new Bet(this);
+        hand = new Hand();
+    }
 
     public User(Socket socket, String name) throws IOException {
         this.socket = socket;
         this.name = name;
-        this.ready = false;
         this.state = State.LIVE;
-        this.oos = new ObjectOutputStream(socket.getOutputStream());
+        this.money = 200;
         bet = new Bet(this);
         hand = new Hand();
     }
+
 
     public String getName() {
         return name;
@@ -68,15 +79,12 @@ public class User { // 플레이어의 정보가 담긴 클래스
     public Socket getSocket() {
         return socket;
     }
-
-    public void sendMessage(String message) throws IOException {
-        oos.writeObject(message);
-        oos.flush();
-    }
-
-    public void sendCardObject(Card card) throws IOException {
+    public void sendCard(Card card) throws IOException {
         oos.writeObject(card);
         oos.flush();
+    }
+    public void sendMessage(String message) throws IOException {
+       out.println(message);
     }
 
 //    public String receiveAck() throws IOException, ClassNotFoundException {

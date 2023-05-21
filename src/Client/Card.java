@@ -1,8 +1,6 @@
 package Client;
 
-import java.io.Serializable;
-
-public record Card(Rank rank, Suit suit) implements Serializable { // 카드의 정보가 담길 클래스
+public record Card(Rank rank, Suit suit)  { // 카드의 정보가 담길 클래스
 
     public String showCard() {
         return suit.getName() + rank.getName();

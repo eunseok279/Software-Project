@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -13,16 +15,21 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     List<Card> tableCard = new ArrayList<>(); // table 있는 패
     Deck deck = new Deck();
     List<User> users = Collections.synchronizedList(new ArrayList<>());
+    ExecutorService executorService = Executors.newFixedThreadPool(12);
+
     int gameCount = 1;
     int baseBet = 4;
     boolean setDealerButton = false;
     static boolean game = false;
 
 
-    public void setUpGame(int port) {
-        System.out.println("wait for Users...");
-        ExecutorService executorService = Executors.newFixedThreadPool(10);
+    public void setUpGame(int port) throws ClassNotFoundException, SQLException {
+        Database db = new Database();
+        Class.forName("com.mysql.cj.jdbc.Driver");
+        db.con = DriverManager.getConnection(db.url, db.user, db.passwd);
+        db.stmt = db.con.createStatement();
 
+        System.out.println("wait for Users...");
 // 클라이언트 연결을 받는 스레드
         Runnable connectionHandler = () -> {
             while (true) {
@@ -32,12 +39,23 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                         BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                         String receiveName = in.readLine();
 
-                        User user = new User(clientSocket, receiveName);
-                        users.add(user);
-                        System.out.println(user.getName()+ " is joined!");
-
-                        UserHandler handler = new UserHandler(user, users, this);
-                        executorService.submit(handler);
+                        if (db.checkUser(receiveName)) {
+                            int userMoney = db.getUserMoney(receiveName);
+                            User user = new User(clientSocket, receiveName, userMoney);
+                            users.add(user);
+                            System.out.println(user.getName() + " is exist");
+                            System.out.println(user.getName() + " is joined!");
+                            UserHandler handler = new UserHandler(user, users, this);
+                            executorService.submit(handler);
+                        } else {
+                            db.insertUser(receiveName, 200);
+                            User user = new User(clientSocket, receiveName);
+                            users.add(user);
+                            System.out.println(user.getName() + " is added");
+                            System.out.println(user.getName() + " is joined!");
+                            UserHandler handler = new UserHandler(user, users, this);
+                            executorService.submit(handler);
+                        }
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -82,12 +100,24 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             }
         };
         executorService.submit(readyChecker);
-
+        Runnable isExisting = () -> {
+            while (true) {
+                for (User user : users) {
+                    if (user.getSocket().isClosed()) users.remove(user);
+                }
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
+        executorService.submit(isExisting);
     }
 
     public void gameStart() throws IOException, ClassNotFoundException {
         System.out.println("Set Dealer Button");
-        if(!setDealerButton) setDealerButton(users);
+        if (!setDealerButton) setDealerButton(users);
         if (gameCount == 3) {
             gameCount = 1;
             baseBet *= 2;
@@ -111,13 +141,13 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                 users.remove(user);
             }
         gameCount++;
-        for(int i = 0;i<round.pots.size();i++) {
+        for (int i = 0; i < round.pots.size(); i++) {
             Pot pot = round.pots.get(i);
             determineWinners(pot);
         }
         deck.initCard();
-        for(User user : users){
-            sendMsg("/init",user);
+        for (User user : users) {
+            sendMsg("/init", user);
         }
         game = false;
     }
@@ -126,23 +156,23 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         return users.get(Round.currentUserIndex);
     }
 
-    public void givePersonalCard(List<User>users) throws IOException, ClassNotFoundException {
+    public void givePersonalCard(List<User> users) throws IOException, ClassNotFoundException {
         for (int i = 0; i < 2; i++)
             for (User user : users) {
                 Card card = deck.drawCard();
                 user.hand.cards.add(card);
-                user.sendCardObject(card);
+                user.sendCard(card);
             }
     }
 
     public void addCard(int count) throws IOException, ClassNotFoundException {
-        for(int i = 0 ;i<count;i++) {
+        for (int i = 0; i < count; i++) {
             Card card = deck.drawCard();
 
             tableCard.add(card);
             for (User user : users) {
                 user.hand.cards.add(card);
-                user.sendCardObject(card);
+                user.sendCard(card);
             }
         }
     }
@@ -279,7 +309,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         User currentUser = itr.next();
         currentWinners.add(currentUser);
 
-        while(itr.hasNext()) {
+        while (itr.hasNext()) {
             currentUser = itr.next();
             int comparisonResult = compareHands(currentWinners.get(0), currentUser);
 
@@ -291,9 +321,9 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             }
         }
 
-        for(User user : currentWinners){
+        for (User user : currentWinners) {
             user.sendMessage("Winner!!");
-            int money = pot.getPotMoney()/currentWinners.size();
+            int money = pot.getPotMoney() / currentWinners.size();
             user.plusMoney(money);
         }
     }
@@ -344,6 +374,14 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     public void initUserCard() {
         for (User user : users)
             user.hand.cards.clear();
+    }
+
+    public void addUser(User user) throws IOException {
+        users.add(user);
+        System.out.println(user.getName() + " is joined!");
+
+        UserHandler handler = new UserHandler(user, users, this);
+        executorService.submit(handler);
     }
 }
 

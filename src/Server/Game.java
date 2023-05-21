@@ -1,10 +1,18 @@
 package Server;
 
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.sql.SQLException;
+
 public class Game {
-    public static void main(String[] args) {
+    Dealer dealer = new Dealer();
+    public Game() throws IOException, ClassNotFoundException, SQLException {
         int port = 8080;
-        Dealer dealer = new Dealer();
         dealer.setUpGame(port);
+    }
+
+    public static void main(String[] args) throws IOException, SQLException, ClassNotFoundException {
+        new Game();
     }
 }
 

@@ -3,12 +3,14 @@ package Server;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
 import java.util.List;
 
 public class UserHandler implements Runnable {
     private final User user;
     private final List<User> users;
     BufferedReader in;
+    ObjectOutputStream out;
     Dealer dealer;
 
     public UserHandler(User user, List<User> users, Dealer dealer) throws IOException {
@@ -20,9 +22,9 @@ public class UserHandler implements Runnable {
 
     @Override
     public void run() {
-        String message = " ";
+        String message = "";
         try {
-            while (true) {
+            while (!user.getSocket().isClosed()) {
                 message = in.readLine();
                 if (message.startsWith("/")) {
                     if (message.startsWith("/quit")) {
@@ -54,6 +56,7 @@ public class UserHandler implements Runnable {
             try {
                 user.getSocket().close();
                 users.remove(user);
+                System.out.println(user.getName()+" is exit");
             } catch (IOException e) {
                 e.printStackTrace();
             }
