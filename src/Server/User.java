@@ -19,16 +19,16 @@ public class User { // 플레이어의 정보가 담긴 클래스
     private boolean ready = false;
     private final Socket socket;
     ObjectOutputStream oos;
-    PrintWriter out;
+    //PrintWriter out;
     private String command;
     private boolean result;
 
-    public User(Socket socket, String name, int money) throws IOException {
+    public User(Socket socket, String name, int money,ObjectOutputStream oos) throws IOException {
         this(socket, name);
         this.state = State.LIVE;
         this.money = money;
-        this.oos= new ObjectOutputStream(new ObjectOutputStream(socket.getOutputStream()));
-        this.out = new PrintWriter(socket.getOutputStream(), true);
+        this.oos= oos;
+       // this.out = new PrintWriter(socket.getOutputStream(), true);
         bet = new Bet(this);
         hand = new Hand();
     }
@@ -81,10 +81,14 @@ public class User { // 플레이어의 정보가 담긴 클래스
     }
     public void sendCard(Card card) throws IOException {
         oos.writeObject(card);
+        oos.reset();
         oos.flush();
     }
     public void sendMessage(String message) throws IOException {
-       out.println(message);
+       //out.println(message);
+        oos.writeObject(message);
+        oos.reset();
+        oos.flush();
     }
 
 //    public String receiveAck() throws IOException, ClassNotFoundException {

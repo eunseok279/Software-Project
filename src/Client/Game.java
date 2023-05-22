@@ -1,6 +1,8 @@
 package Client;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,8 +11,6 @@ import java.util.Scanner;
 public class Game {
     Scanner scanner = new Scanner(System.in);
     Socket socket;
-    SharedCard sc = new SharedCard();
-
     public Game() throws IOException {
         //System.out.print("Insert Server IP >> ");
         int port = 8080;
@@ -25,76 +25,42 @@ public class Game {
     public void access(String serverAddress, int port) throws IOException {
         socket = new Socket(serverAddress, port);
         System.out.println("Connect Success!!");
-        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+        ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+        ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
         System.out.print("Insert name >> ");
         String name = scanner.next();
-        out.println(name);
+        oos.writeObject(name);
 
-        MessageReceiver messageReceiver = new MessageReceiver(socket, sc);
-        MessageSender messageSender = new MessageSender(socket);
-        ObjectReceiver objectReceiver = new ObjectReceiver(socket,sc);
-        Thread messageReceive = new Thread(messageReceiver);
-        messageReceive.start();
+        MessageReceiver messageReceiver = new MessageReceiver(socket, ois);
+        MessageSender messageSender = new MessageSender(socket, oos);
         Thread messageSend = new Thread(messageSender);
         messageSend.start();
-        Thread objectReceive =new Thread(objectReceiver);
-        objectReceive.start();
+        Thread messageReceive = new Thread(messageReceiver);
+        messageReceive.start();
         System.out.println("Enter a command /+ready/unready/quit >> ");
     }
 }
 
 class MessageReceiver implements Runnable {
-    private Socket socket;
-    private SharedCard sc;
+    private final Socket socket;
+    ObjectInputStream ois;
+    List<Card> cards = new ArrayList<>();
 
-    public MessageReceiver(Socket socket, SharedCard sc) {
+    public MessageReceiver(Socket socket, ObjectInputStream ois) {
         this.socket = socket;
-        this.sc = sc;
+        this.ois = ois;
     }
 
     @Override
     public void run() {
         try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-            String receivedMessage;
-            while ((receivedMessage = reader.readLine()) != null) {
-                if (receivedMessage.startsWith("/init")) {
-                    while (true) if (sc.isOk) break;
-                    sc.cards.clear();
-                    sc.isOk = false;
-                } else System.out.println(receivedMessage);
-            }
-
-            reader.close();
-            socket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-}
-
-class ObjectReceiver implements Runnable {
-    private Socket socket;
-    private List<Card> cards = new ArrayList<>();
-    private SharedCard sc;
-
-    public ObjectReceiver(Socket socket, SharedCard sc) {
-        this.socket = socket;
-        this.sc = sc;
-    }
-
-    @Override
-    public void run() {
-        try {
-            ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-
             Object receivedObject;
             while ((receivedObject = ois.readObject()) != null) {
-                if (receivedObject instanceof Card) {
-                    Card card = (Card) receivedObject;
-                    sc.cards.add(card);
-                    sc.isOk = true;
+                if (receivedObject instanceof Card card) {
+                    cards.add(card);
+                } else if (receivedObject instanceof String message) {
+                    if (message.startsWith("/init")) cards.clear();
+                    else System.out.println(message);
                 }
             }
 
@@ -104,44 +70,38 @@ class ObjectReceiver implements Runnable {
             e.printStackTrace();
         }
     }
-
-    public void clearCard() {
-        cards.clear();
-    }
 }
-
 
 class MessageSender implements Runnable {
     Scanner scanner = new Scanner(System.in);
-    private final PrintWriter out;
+    private final ObjectOutputStream oos;
     Socket socket;
 
-    public MessageSender(Socket socket) throws IOException {
+    public MessageSender(Socket socket, ObjectOutputStream oos) throws IOException {
         this.socket = socket;
-        this.out = new PrintWriter(socket.getOutputStream(), true);
+        this.oos = oos;
     }
 
     public void run() {
         String message;
-        while (!socket.isClosed()) {
-            message = scanner.nextLine();
-            if (message.equalsIgnoreCase("/quit")) {
-                out.println("/quit");
-                System.out.println("Connection Lost");
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+        try {
+            while (!socket.isClosed()) {
+                message = scanner.nextLine();
+                if (message.equalsIgnoreCase("/quit")) {
+                    oos.writeObject("/quit");
+                    System.out.println("Connection Lost");
+                    try {
+                        socket.close();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    break;
                 }
-                break;
+                oos.writeObject(message);
             }
-            out.println(message);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         System.out.println("Thread out");
     }
-}
-
-class SharedCard {
-    List<Card> cards = new ArrayList<>();
-    volatile boolean isOk = false;
 }

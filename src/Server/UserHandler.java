@@ -1,57 +1,37 @@
 package Server;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.util.List;
 
 public class UserHandler implements Runnable {
     private final User user;
     private final List<User> users;
-    BufferedReader in;
-    ObjectOutputStream out;
+    ObjectInputStream ois;
     Dealer dealer;
+    boolean isQuit = false;
 
-    public UserHandler(User user, List<User> users, Dealer dealer) throws IOException {
+    public UserHandler(User user, List<User> users,ObjectInputStream ois) throws IOException {
         this.user = user;
         this.users = users;
-        this.dealer = dealer;
-        in = new BufferedReader(new InputStreamReader(user.getSocket().getInputStream()));
+        this.ois = ois;
     }
 
     @Override
     public void run() {
-        String message = "";
         try {
+        String message = "";
             while (!user.getSocket().isClosed()) {
-                message = in.readLine();
+                message = (String) ois.readObject();
                 if (message.startsWith("/")) {
-                    if (message.startsWith("/quit")) {
-                        System.out.println("Connection Lost >> " + user.getName());
-                        sendAll(user.getName() + "'s Connection Lost");
-                        break;
-                    } else if (message.startsWith("/ready")) {
-                        user.setReady(true);
-                        sendAll(user.getName() + " is ready");
-                        System.out.println(user.getName() + " is ready");
-                    } else if (message.startsWith("/unready")) {
-                        user.setReady(false);
-                        sendAll(user.getName() + " is unready");
-                        System.out.println(user.getName() + " is unready");
-                    }
-                    if (Dealer.game) {
-                        User currentUser = dealer.getCurrentUser();
-                        if (user.equals(currentUser)) {
-                            handleCommand(message);
-                        } else user.sendMessage(currentUser.getName() + "'s turn");
-                    }
+                    handleCommand(message);
                 } else {
                     handleChat(message);
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         } finally {
             try {
                 user.getSocket().close();
@@ -64,9 +44,32 @@ public class UserHandler implements Runnable {
     }
 
     private void handleCommand(String command) throws IOException {
-        do {
-            user.setCommand(command);
-        } while (!user.getResult());
+        if(command.startsWith("//")) {
+            if (command.startsWith("//quit")) {
+                System.out.println("Connection Lost >> " + user.getName());
+                sendAll(user.getName() + "'s Connection Lost");
+                isQuit = true;
+            } else if (command.startsWith("//ready")) {
+                user.setReady(true);
+                sendAll(user.getName() + " is ready");
+                System.out.println(user.getName() + " is ready");
+            } else if (command.startsWith("//unready")) {
+                user.setReady(false);
+                sendAll(user.getName() + " is unready");
+                System.out.println(user.getName() + " is unready");
+            }else if(command.startsWith("//money")){
+                user.sendMessage(Integer.toString(user.getMoney()));
+            }
+        }else {
+            if (Dealer.game) {
+                User currentUser = dealer.getCurrentUser();
+                if (user.equals(currentUser)) {
+                    do {
+                        user.setCommand(command);
+                    } while (!user.getResult());
+                } else user.sendMessage(currentUser.getName() + "'s turn");
+            }
+        }
     }
 
     private void handleChat(String message) throws IOException {

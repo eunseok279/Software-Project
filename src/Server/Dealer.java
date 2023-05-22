@@ -1,8 +1,6 @@
 package Server;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.DriverManager;
@@ -36,16 +34,17 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                 try (ServerSocket serverSocket = new ServerSocket(port)) {
                     if (users.size() < 6) {
                         Socket clientSocket = serverSocket.accept();
-                        BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                        String receiveName = in.readLine();
+                        ObjectInputStream ois = new ObjectInputStream((clientSocket.getInputStream()));
+                        ObjectOutputStream oos = new ObjectOutputStream((clientSocket.getOutputStream()));
+                        String receiveName = (String) ois.readObject();
 
                         if (db.checkUser(receiveName)) {
                             int userMoney = db.getUserMoney(receiveName);
-                            User user = new User(clientSocket, receiveName, userMoney);
+                            User user = new User(clientSocket, receiveName, userMoney,oos);
                             users.add(user);
                             System.out.println(user.getName() + " is exist");
                             System.out.println(user.getName() + " is joined!");
-                            UserHandler handler = new UserHandler(user, users, this);
+                            UserHandler handler = new UserHandler(user, users, ois);
                             executorService.submit(handler);
                         } else {
                             db.insertUser(receiveName, 200);
@@ -53,12 +52,14 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                             users.add(user);
                             System.out.println(user.getName() + " is added");
                             System.out.println(user.getName() + " is joined!");
-                            UserHandler handler = new UserHandler(user, users, this);
+                            UserHandler handler = new UserHandler(user, users,ois );
                             executorService.submit(handler);
                         }
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
+                } catch (ClassNotFoundException e) {
+                    throw new RuntimeException(e);
                 }
             }
         };
@@ -374,14 +375,6 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     public void initUserCard() {
         for (User user : users)
             user.hand.cards.clear();
-    }
-
-    public void addUser(User user) throws IOException {
-        users.add(user);
-        System.out.println(user.getName() + " is joined!");
-
-        UserHandler handler = new UserHandler(user, users, this);
-        executorService.submit(handler);
     }
 }
 
