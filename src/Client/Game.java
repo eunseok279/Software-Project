@@ -29,7 +29,7 @@ public class Game {
         ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
         System.out.print("Insert name >> ");
         String name = scanner.next();
-        oos.writeObject(name);
+        oos.writeObject("/name "+name);
 
         MessageReceiver messageReceiver = new MessageReceiver(socket, ois);
         MessageSender messageSender = new MessageSender(socket, oos);
@@ -98,6 +98,7 @@ class MessageSender implements Runnable {
                     break;
                 }
                 oos.writeObject(message);
+                oos.flush();
             }
         } catch (IOException e) {
             e.printStackTrace();

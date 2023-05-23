@@ -2,7 +2,6 @@ package Server;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.io.PrintWriter;
 import java.net.Socket;
 
 public class User { // 플레이어의 정보가 담긴 클래스
@@ -14,8 +13,8 @@ public class User { // 플레이어의 정보가 담긴 클래스
     Bet bet;
     private final String name;
     private int money;
-    private int currentBet = 0;
-    private State state;
+    private int currentBet;
+    private State state = State.LIVE;
     private boolean ready = false;
     private final Socket socket;
     ObjectOutputStream oos;
@@ -23,21 +22,20 @@ public class User { // 플레이어의 정보가 담긴 클래스
     private String command;
     private boolean result;
 
-    public User(Socket socket, String name, int money,ObjectOutputStream oos) throws IOException {
-        this(socket, name);
-        this.state = State.LIVE;
+    public User(Socket socket, String name, ObjectOutputStream oos, int money) throws IOException {
+        this(socket, name, oos);
         this.money = money;
-        this.oos= oos;
-       // this.out = new PrintWriter(socket.getOutputStream(), true);
+        this.currentBet = 0;
         bet = new Bet(this);
         hand = new Hand();
     }
 
-    public User(Socket socket, String name) throws IOException {
+    public User(Socket socket, String name, ObjectOutputStream oos) throws IOException {
         this.socket = socket;
         this.name = name;
-        this.state = State.LIVE;
         this.money = 200;
+        this.oos = oos;
+        this.currentBet = 0;
         bet = new Bet(this);
         hand = new Hand();
     }
@@ -79,13 +77,15 @@ public class User { // 플레이어의 정보가 담긴 클래스
     public Socket getSocket() {
         return socket;
     }
+
     public void sendCard(Card card) throws IOException {
         oos.writeObject(card);
         oos.reset();
         oos.flush();
     }
+
     public void sendMessage(String message) throws IOException {
-       //out.println(message);
+        //out.println(message);
         oos.writeObject(message);
         oos.reset();
         oos.flush();
@@ -103,9 +103,9 @@ public class User { // 플레이어의 정보가 담긴 클래스
 //        return ack;
 //    }
 
-    public void chooseBetAction(int basicBet, boolean noBet) throws IOException { // basicBet = 앞 사람의 배팅금
-        command = null;                  // currentBet = 현재 내놓은 배팅금
-        while (command == null) {
+    public void chooseBetAction(int basicBet, boolean noBet) throws IOException { // basicBet = 앞 사람의 배팅금// currentBet = 현재 내놓은 배팅금
+        while (true) {
+            command = null;
             try {
                 Thread.sleep(100); // 0.1초마다 확인
             } catch (InterruptedException e) {

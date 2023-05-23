@@ -4,20 +4,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+
 public class Round {
     List<User> users;
     List<Pot> pots = new ArrayList<>();
+    CurrentPlayerTracker currentPlayerTracker;
     static int basicBet;
-    private final int baseBet;
-    static int currentUserIndex;
+    private int baseBet;
     boolean noBetting = false;
     int userCount;
 
-    public Round(List<User> users, int baseBet) {
+    public Round(List<User> users, int baseBet, CurrentPlayerTracker currentPlayerTracker) {
         this.users = users;
         pots.add(new Pot());
-        if (users.size() == 2) currentUserIndex = 0;
-        else currentUserIndex = 3;
+        this.currentPlayerTracker = currentPlayerTracker;
+
         this.baseBet = baseBet;
         this.userCount = users.size();
     }
@@ -28,7 +29,6 @@ public class Round {
         else user = users.get(1);
         user.sendMessage("You are Small Blind!! Basic Betting >> 2");
         user.betMoney(baseBet / 2);
-        pots.get(0).plusPot(baseBet / 2, user);
     }
 
     public void bigBlind() throws IOException {
@@ -37,7 +37,6 @@ public class Round {
         else user = users.get(2);
         user.sendMessage("You are Big Blind!! Basic Betting >> 4");
         user.betMoney(baseBet);
-        pots.get(0).plusPot(baseBet, user);
     }
 
     public void freeFlop() throws IOException { // 개인 카드 2장 분배 후 첫 배팅
@@ -49,7 +48,7 @@ public class Round {
         if (checkRemainUser(users)) {
             basicBet = baseBet;
             noBetting = true;
-            currentUserIndex = findIfSBFold();
+            currentPlayerTracker.index = findIfSBFold();
             playRound();
         }
     }
@@ -58,7 +57,7 @@ public class Round {
         if (checkRemainUser(users)) {
             basicBet = baseBet;
             noBetting = true;
-            currentUserIndex = findIfSBFold();
+            currentPlayerTracker.index = findIfSBFold();
             playRound();
         }
     }
@@ -67,7 +66,7 @@ public class Round {
         if (checkRemainUser(users)) {
             basicBet = baseBet;
             noBetting = true;
-            currentUserIndex = findIfSBFold();
+            currentPlayerTracker.index = findIfSBFold();
             playRound();
             calculatePot();
         }
@@ -78,18 +77,15 @@ public class Round {
         int allinMoney = 0;
         boolean allin = false;
         while (turn < userCount) {
-            User currentUser = users.get(currentUserIndex);
+            User currentUser = users.get(currentPlayerTracker.index);
             if (canUserBet(currentUser)) {
                 currentUser.sendMessage("Your Turn");
-                currentUser.sendMessage("Current Minimum Bet >> " + basicBet);
-
                 if (allin) { // 올인 상태 발생
                     int ownMoney = currentUser.getMoney() + currentUser.getCurrentBet();
                     if (ownMoney < allinMoney) { //올인 금액보다 적다면 -> 콜할 능력X -> 폴드 or 올인
                         currentUser.sendMessage("Fold or All-In");
                         currentUser.respondToAllIn(true, 0);
                     } else { // 올인 금액보다 같거나 크다면 -> 콜, 폴드, 레이즈
-                        currentUser.sendMessage("Your Turn");
                         currentUser.sendMessage("Call or Fold or Raise");
                         currentUser.respondToAllIn(false, allinMoney);
                     }
@@ -122,7 +118,8 @@ public class Round {
                     }
                 }
             }
-            currentUserIndex = (currentUserIndex + 1) % users.size();
+            currentUser.setCommand(null);
+            currentPlayerTracker.index = (currentPlayerTracker.index + 1) % users.size();
         }
     }
 
@@ -183,6 +180,4 @@ public class Round {
         User.State state = user.getState();
         return !(state == User.State.FOLD) && !(state == User.State.DEPLETED);
     }
-
-
 }

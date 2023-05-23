@@ -1,6 +1,8 @@
 package Server;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.DriverManager;
@@ -9,12 +11,15 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+class CurrentPlayerTracker {
+    int index=0;
+}
 public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     List<Card> tableCard = new ArrayList<>(); // table 있는 패
     Deck deck = new Deck();
     List<User> users = Collections.synchronizedList(new ArrayList<>());
     ExecutorService executorService = Executors.newFixedThreadPool(12);
-
+    CurrentPlayerTracker currentPlayerTracker = new CurrentPlayerTracker();
     int gameCount = 1;
     int baseBet = 4;
     boolean setDealerButton = false;
@@ -37,24 +42,28 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                         ObjectInputStream ois = new ObjectInputStream((clientSocket.getInputStream()));
                         ObjectOutputStream oos = new ObjectOutputStream((clientSocket.getOutputStream()));
                         String receiveName = (String) ois.readObject();
-
+                        if (!receiveName.startsWith("/name")) {
+                            ois.close();
+                            oos.close();
+                            clientSocket.close();
+                            continue;
+                        }
+                        String name = receiveName.split(" ")[1];
+                        User user;
                         if (db.checkUser(receiveName)) {
                             int userMoney = db.getUserMoney(receiveName);
-                            User user = new User(clientSocket, receiveName, userMoney,oos);
-                            users.add(user);
+                            user = new User(clientSocket, name, oos, userMoney);
                             System.out.println(user.getName() + " is exist");
-                            System.out.println(user.getName() + " is joined!");
-                            UserHandler handler = new UserHandler(user, users, ois);
-                            executorService.submit(handler);
                         } else {
                             db.insertUser(receiveName, 200);
-                            User user = new User(clientSocket, receiveName);
-                            users.add(user);
+                            user = new User(clientSocket, name, oos);
                             System.out.println(user.getName() + " is added");
-                            System.out.println(user.getName() + " is joined!");
-                            UserHandler handler = new UserHandler(user, users,ois );
-                            executorService.submit(handler);
                         }
+                        users.add(user);
+                        System.out.println(user.getName() + " is joined!");
+                        UserHandler handler = new UserHandler(user, users, ois, currentPlayerTracker);
+                        sendMsg("Welcome!!", user);
+                        executorService.submit(handler);
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -123,7 +132,9 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             gameCount = 1;
             baseBet *= 2;
         }
-        Round round = new Round(users, baseBet);
+        if (users.size() == 2) currentPlayerTracker.index = 0;
+        else currentPlayerTracker.index = 3;
+        Round round = new Round(users, baseBet, currentPlayerTracker);
         game = true;
         round.smallBlind();
         round.bigBlind();
@@ -151,10 +162,6 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             sendMsg("/init", user);
         }
         game = false;
-    }
-
-    public synchronized User getCurrentUser() {
-        return users.get(Round.currentUserIndex);
     }
 
     public void givePersonalCard(List<User> users) throws IOException, ClassNotFoundException {
@@ -343,7 +350,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             if (rankComp == 0) return o2.getValue().suit().compareTo(o1.getValue().suit());
             return rankComp;
         });
-        sendAll(users.get(entry.get(0).getKey()).getName() + "is DealerButton!!");
+        sendAll(users.get(entry.get(0).getKey()).getName() + " >> DealerButton!!");
         rearrangeOrder(users, entry.get(0).getKey());
         initUserCard();
         deck.initCard();

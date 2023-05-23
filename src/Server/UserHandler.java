@@ -7,19 +7,20 @@ public class UserHandler implements Runnable {
     private final User user;
     private final List<User> users;
     ObjectInputStream ois;
-    Dealer dealer;
+    CurrentPlayerTracker currentPlayerTracker;
     boolean isQuit = false;
 
-    public UserHandler(User user, List<User> users,ObjectInputStream ois) throws IOException {
+    public UserHandler(User user, List<User> users, ObjectInputStream ois, CurrentPlayerTracker currentPlayerTracker) throws IOException {
         this.user = user;
         this.users = users;
         this.ois = ois;
+        this.currentPlayerTracker = currentPlayerTracker;
     }
 
     @Override
     public void run() {
         try {
-        String message = "";
+        String message;
             while (!user.getSocket().isClosed()) {
                 message = (String) ois.readObject();
                 if (message.startsWith("/")) {
@@ -62,11 +63,12 @@ public class UserHandler implements Runnable {
             }
         }else {
             if (Dealer.game) {
-                User currentUser = dealer.getCurrentUser();
+                User currentUser = users.get(currentPlayerTracker.index);
                 if (user.equals(currentUser)) {
                     do {
                         user.setCommand(command);
                     } while (!user.getResult());
+                    user.sendMessage("Turn End");
                 } else user.sendMessage(currentUser.getName() + "'s turn");
             }
         }
@@ -82,3 +84,4 @@ public class UserHandler implements Runnable {
         }
     }
 }
+
