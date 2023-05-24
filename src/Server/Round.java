@@ -1,5 +1,6 @@
 package Server;
 
+import javax.swing.plaf.TableHeaderUI;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,19 +9,20 @@ import java.util.List;
 public class Round {
     List<User> users;
     List<Pot> pots = new ArrayList<>();
-    CurrentPlayerTracker currentPlayerTracker;
+    CurrentTracker currentTracker;
     static int basicBet;
     private int baseBet;
     boolean noBetting = false;
     int userCount;
 
-    public Round(List<User> users, int baseBet, CurrentPlayerTracker currentPlayerTracker) {
+    public Round(List<User> users, int baseBet, CurrentTracker currentTracker) {
         this.users = users;
         pots.add(new Pot());
-        this.currentPlayerTracker = currentPlayerTracker;
+        this.currentTracker = currentTracker;
 
         this.baseBet = baseBet;
         this.userCount = users.size();
+        new Thread(CheckConnect);
     }
 
     public void smallBlind() throws IOException { // 시작 강제 베팅
@@ -48,7 +50,7 @@ public class Round {
         if (checkRemainUser(users)) {
             basicBet = baseBet;
             noBetting = true;
-            currentPlayerTracker.index = findIfSBFold();
+            currentTracker.index = findIfSBFold();
             playRound();
         }
     }
@@ -57,7 +59,7 @@ public class Round {
         if (checkRemainUser(users)) {
             basicBet = baseBet;
             noBetting = true;
-            currentPlayerTracker.index = findIfSBFold();
+            currentTracker.index = findIfSBFold();
             playRound();
         }
     }
@@ -66,7 +68,7 @@ public class Round {
         if (checkRemainUser(users)) {
             basicBet = baseBet;
             noBetting = true;
-            currentPlayerTracker.index = findIfSBFold();
+            currentTracker.index = findIfSBFold();
             playRound();
             calculatePot();
         }
@@ -77,7 +79,7 @@ public class Round {
         int allinMoney = 0;
         boolean allin = false;
         while (turn < userCount) {
-            User currentUser = users.get(currentPlayerTracker.index);
+            User currentUser = users.get(currentTracker.index);
             if (canUserBet(currentUser)) {
                 currentUser.sendMessage("Your Turn");
                 if (allin) { // 올인 상태 발생
@@ -119,8 +121,9 @@ public class Round {
                 }
             }
             currentUser.setCommand(null);
-            currentPlayerTracker.index = (currentPlayerTracker.index + 1) % users.size();
+            currentTracker.index = (currentTracker.index + 1) % users.size();
         }
+
     }
 
     public void calculatePot() {
@@ -148,7 +151,7 @@ public class Round {
         for (User user : users) {
             if (canUserBet(user)) count++;
         }
-        return count >= 2; // 2명 미만이면 false
+        return count > 1; // 2명 미만이면 false
     }
 
     public static void setBasicBet(int money) {
@@ -180,4 +183,12 @@ public class Round {
         User.State state = user.getState();
         return !(state == User.State.FOLD) && !(state == User.State.DEPLETED);
     }
+
+    Runnable CheckConnect = () ->{
+      while(true){
+          users.removeIf(user -> !user.getSocket().isConnected());
+      }
+    };
 }
+
+

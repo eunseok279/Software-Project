@@ -11,68 +11,40 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-class CurrentPlayerTracker {
+class CurrentTracker {
     int index=0;
+    boolean game = false;
 }
 public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     List<Card> tableCard = new ArrayList<>(); // table 있는 패
     Deck deck = new Deck();
     List<User> users = Collections.synchronizedList(new ArrayList<>());
-    ExecutorService executorService = Executors.newFixedThreadPool(12);
-    CurrentPlayerTracker currentPlayerTracker = new CurrentPlayerTracker();
+    ExecutorService executorService = Executors.newCachedThreadPool();
+    CurrentTracker currentTracker = new CurrentTracker();
     int gameCount = 1;
     int baseBet = 4;
     boolean setDealerButton = false;
-    static boolean game = false;
-
+    private Socket clientSocket;
+    Database db = new Database();
 
     public void setUpGame(int port) throws ClassNotFoundException, SQLException {
-        Database db = new Database();
-        Class.forName("com.mysql.cj.jdbc.Driver");
-        db.con = DriverManager.getConnection(db.url, db.user, db.passwd);
-        db.stmt = db.con.createStatement();
-
         System.out.println("wait for Users...");
 // 클라이언트 연결을 받는 스레드
         Runnable connectionHandler = () -> {
             while (true) {
                 try (ServerSocket serverSocket = new ServerSocket(port)) {
-                    if (users.size() < 6) {
-                        Socket clientSocket = serverSocket.accept();
-                        ObjectInputStream ois = new ObjectInputStream((clientSocket.getInputStream()));
-                        ObjectOutputStream oos = new ObjectOutputStream((clientSocket.getOutputStream()));
-                        String receiveName = (String) ois.readObject();
-                        if (!receiveName.startsWith("/name")) {
-                            ois.close();
-                            oos.close();
-                            clientSocket.close();
-                            continue;
-                        }
-                        String name = receiveName.split(" ")[1];
-                        User user;
-                        if (db.checkUser(receiveName)) {
-                            int userMoney = db.getUserMoney(receiveName);
-                            user = new User(clientSocket, name, oos, userMoney);
-                            System.out.println(user.getName() + " is exist");
-                        } else {
-                            db.insertUser(receiveName, 200);
-                            user = new User(clientSocket, name, oos);
-                            System.out.println(user.getName() + " is added");
-                        }
-                        users.add(user);
-                        System.out.println(user.getName() + " is joined!");
-                        UserHandler handler = new UserHandler(user, users, ois, currentPlayerTracker);
-                        sendMsg("Welcome!!", user);
-                        executorService.submit(handler);
+                    if (users.size() <=8) {
+                        clientSocket = serverSocket.accept();
+                        new Thread(createUser).start();
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
-                } catch (ClassNotFoundException e) {
-                    throw new RuntimeException(e);
                 }
             }
         };
         executorService.submit(connectionHandler);
+
+
 
 // 준비 상태를 확인하는 스레드
         Runnable readyChecker = () -> {
@@ -92,11 +64,14 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
-                        try {
-                            gameStart();
-                        } catch (IOException | ClassNotFoundException e) {
-                            throw new RuntimeException(e);
-                        }
+                        executorService.submit(gameStart);
+                        do{
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }while(currentTracker.game);
                         for (User user : users) {
                             user.setReady(false);
                         }
@@ -110,59 +85,84 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             }
         };
         executorService.submit(readyChecker);
-        Runnable isExisting = () -> {
-            while (true) {
-                for (User user : users) {
-                    if (user.getSocket().isClosed()) users.remove(user);
-                }
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        };
-        executorService.submit(isExisting);
     }
+    Runnable createUser = ()->{
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            db.con = DriverManager.getConnection(db.url, db.user, db.passwd);
+            db.stmt = db.con.createStatement();
+            ObjectInputStream ois = new ObjectInputStream((clientSocket.getInputStream()));
+            ObjectOutputStream oos = new ObjectOutputStream((clientSocket.getOutputStream()));
+            String receiveName = (String) ois.readObject();
+            if (!receiveName.startsWith("/name")) {
+                ois.close();
+                oos.close();
+                clientSocket.close();
+                return;
+            }
+            String name = receiveName.split(" ")[1];
+            User user;
+            if (db.checkUser(receiveName)) {
+                int userMoney = db.getUserMoney(receiveName);
+                user = new User(clientSocket, name, oos, userMoney);
+                System.out.println(user.getName() + " is exist");
+            } else {
+                db.insertUser(receiveName, 200);
+                user = new User(clientSocket, name, oos);
+                System.out.println(user.getName() + " is added");
+            }
+            users.add(user);
+            System.out.println(user.getName() + " is joined!");
+            UserHandler handler = new UserHandler(user, users, ois, currentTracker);
+            sendMsg("Welcome!!", user);
+            executorService.submit(handler);
+        }catch (IOException | ClassNotFoundException | SQLException e){
+            e.printStackTrace();
+        }
+    };
 
-    public void gameStart() throws IOException, ClassNotFoundException {
-        System.out.println("Set Dealer Button");
-        if (!setDealerButton) setDealerButton(users);
-        if (gameCount == 3) {
-            gameCount = 1;
-            baseBet *= 2;
-        }
-        if (users.size() == 2) currentPlayerTracker.index = 0;
-        else currentPlayerTracker.index = 3;
-        Round round = new Round(users, baseBet, currentPlayerTracker);
-        game = true;
-        round.smallBlind();
-        round.bigBlind();
-        givePersonalCard(users);
-        round.freeFlop(); // 빅블라인드 다음 사람부터 시작
-        addCard(3);
-        round.flop();
-        addCard(1);
-        round.turn();
-        addCard(1);
-        round.river();
-        for (User user : users)
-            if (user.getMoney() < baseBet) {
-                user.sendMessage("Your Base Money is not enough");
-                user.getSocket().close();
-                users.remove(user);
+    Runnable gameStart = ()-> {
+        try {
+            System.out.println("Set Dealer Button");
+            if (!setDealerButton) setDealerButton(users);
+            if (gameCount == 3) {
+                gameCount = 1;
+                baseBet *= 2;
             }
-        gameCount++;
-        for (int i = 0; i < round.pots.size(); i++) {
-            Pot pot = round.pots.get(i);
-            determineWinners(pot);
+            if (users.size() == 2) currentTracker.index = 0;
+            else currentTracker.index = 3;
+            Round round = new Round(new ArrayList<>(users), baseBet, currentTracker);
+            currentTracker.game = true;
+            round.smallBlind();
+            round.bigBlind();
+            givePersonalCard(users);
+            round.freeFlop(); // 빅블라인드 다음 사람부터 시작
+            addCard(3);
+            round.flop();
+            addCard(1);
+            round.turn();
+            addCard(1);
+            round.river();
+            for (User user : users)
+                if (user.getMoney() < baseBet) {
+                    user.sendMessage("Your Base Money is not enough");
+                    user.getSocket().close();
+                    users.remove(user);
+                }
+            gameCount++;
+            for (int i = 0; i < round.pots.size(); i++) {
+                Pot pot = round.pots.get(i);
+                determineWinners(pot);
+            }
+            deck.initCard();
+            for (User user : users) {
+                sendMsg("/init", user);
+            }
+            currentTracker.game = false;
+        }catch (IOException | ClassNotFoundException e){
+            e.printStackTrace();
         }
-        deck.initCard();
-        for (User user : users) {
-            sendMsg("/init", user);
-        }
-        game = false;
-    }
+    };
 
     public void givePersonalCard(List<User> users) throws IOException, ClassNotFoundException {
         for (int i = 0; i < 2; i++)
@@ -384,4 +384,3 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             user.hand.cards.clear();
     }
 }
-

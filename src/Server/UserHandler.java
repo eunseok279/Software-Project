@@ -1,26 +1,27 @@
 package Server;
 
 import java.io.*;
+import java.net.SocketException;
 import java.util.List;
 
 public class UserHandler implements Runnable {
     private final User user;
     private final List<User> users;
     ObjectInputStream ois;
-    CurrentPlayerTracker currentPlayerTracker;
+    CurrentTracker currentTracker;
     boolean isQuit = false;
 
-    public UserHandler(User user, List<User> users, ObjectInputStream ois, CurrentPlayerTracker currentPlayerTracker) throws IOException {
+    public UserHandler(User user, List<User> users, ObjectInputStream ois, CurrentTracker currentTracker) throws IOException {
         this.user = user;
         this.users = users;
         this.ois = ois;
-        this.currentPlayerTracker = currentPlayerTracker;
+        this.currentTracker = currentTracker;
     }
 
     @Override
     public void run() {
         try {
-        String message;
+            String message;
             while (!user.getSocket().isClosed()) {
                 message = (String) ois.readObject();
                 if (message.startsWith("/")) {
@@ -29,6 +30,8 @@ public class UserHandler implements Runnable {
                     handleChat(message);
                 }
             }
+        } catch (SocketException e) {
+            currentTracker.index--;
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
@@ -37,7 +40,7 @@ public class UserHandler implements Runnable {
             try {
                 user.getSocket().close();
                 users.remove(user);
-                System.out.println(user.getName()+" is exit");
+                System.out.println(user.getName() + " is exit");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -45,7 +48,7 @@ public class UserHandler implements Runnable {
     }
 
     private void handleCommand(String command) throws IOException {
-        if(command.startsWith("//")) {
+        if (command.startsWith("//")) {
             if (command.startsWith("//quit")) {
                 System.out.println("Connection Lost >> " + user.getName());
                 sendAll(user.getName() + "'s Connection Lost");
@@ -58,12 +61,12 @@ public class UserHandler implements Runnable {
                 user.setReady(false);
                 sendAll(user.getName() + " is unready");
                 System.out.println(user.getName() + " is unready");
-            }else if(command.startsWith("//money")){
+            } else if (command.startsWith("//money")) {
                 user.sendMessage(Integer.toString(user.getMoney()));
             }
-        }else {
-            if (Dealer.game) {
-                User currentUser = users.get(currentPlayerTracker.index);
+        } else {
+            if (currentTracker.game) {
+                User currentUser = users.get(currentTracker.index);
                 if (user.equals(currentUser)) {
                     do {
                         user.setCommand(command);

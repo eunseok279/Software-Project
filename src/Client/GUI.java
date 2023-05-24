@@ -3,13 +3,13 @@ package Client;
 import javax.swing.*;
 import java.awt.*;
 
-public class PokerClient {
+public class GUI {
 
     private JFrame frame;
     private JTextField nicknameField;
     private JTextField serverIPField;
 
-    public PokerClient() {
+    public GUI() {
         // 프레임 초기화
         frame = new JFrame("Poker Client");
 
@@ -65,6 +65,6 @@ public class PokerClient {
 
     // 메인 메소드
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(PokerClient::new);
+        SwingUtilities.invokeLater(GUI::new);
     }
 }
