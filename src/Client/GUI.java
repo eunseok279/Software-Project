@@ -62,6 +62,11 @@ public class GUI {
         Runnable checkConnect = () -> {
             while (true) {
                 if (result) break;
+                try{
+                    Thread.sleep(1000);
+                }catch (InterruptedException e){
+                    Thread.currentThread().interrupt();
+                }
             }
             JOptionPane.showMessageDialog(frame, "Connecting!!");
             System.out.println("Thread out");
