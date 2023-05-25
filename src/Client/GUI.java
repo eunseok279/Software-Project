@@ -2,12 +2,15 @@ package Client;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionListener;
 
 public class GUI {
 
     private JFrame frame;
     private JTextField nicknameField;
     private JTextField serverIPField;
+    private JButton confirmButton;
+    private boolean result =false;
 
     public GUI() {
         // 프레임 초기화
@@ -29,13 +32,12 @@ public class GUI {
         // 서버 IP 필드 추가
         JPanel serverIPPanel = new JPanel(new FlowLayout());
         serverIPPanel.add(new JLabel("Server IP:"));
-        serverIPField = new JTextField("Localhost",15); // 텍스트필드 길이 설정
+        serverIPField = new JTextField("Localhost", 15); // 텍스트필드 길이 설정
         serverIPPanel.add(serverIPField);
         frame.add(serverIPPanel);
 
         // 확인 버튼 추가
-        JButton confirmButton = new JButton("Confirm");
-        confirmButton.addActionListener(e -> onConfirm());
+        confirmButton = new JButton("Confirm");
         frame.add(confirmButton);
 
         // 프레임 크기 설정 및 프레임 보이게 설정
@@ -44,18 +46,26 @@ public class GUI {
     }
 
     // 확인 버튼 클릭 시 실행되는 메소드
-    private void onConfirm() {
+    public boolean onConfirm() {
         String nickname = nicknameField.getText();
         String serverIP = serverIPField.getText();
 
         // 닉네임과 서버 IP 확인
         if (nickname.isEmpty() || serverIP.isEmpty()) {
-            // 입력값이 비어있을 때 오류 메시지 표시
             JOptionPane.showMessageDialog(frame, "Nickname and server IP must be filled in.");
-        } else {
-            // 서버에 연결을 시도하고, 성공하면 채팅 창을 열기 (여기서는 예시로 단순히 채팅 창을 열도록 설정)
-            openChatWindow(nickname, serverIP);
+            return false;
         }
+        return true;
+    }
+
+    public void openChat() {
+        Runnable checkConnect = () -> {
+            while (true) {
+                if (result) break;
+            }
+            JOptionPane.showMessageDialog(frame, "Connecting!!");
+            System.out.println("Thread out");
+        }; new Thread(checkConnect).start();
     }
 
     // 채팅 창을 연다
@@ -63,8 +73,19 @@ public class GUI {
         // ... 여기서 채팅 창 구현
     }
 
-    // 메인 메소드
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(GUI::new);
+    public String getInputName() {
+        return nicknameField.getText();
+    }
+
+    public String getIP() {
+        return serverIPField.getText();
+    }
+
+    public void setResult(boolean result) {
+        this.result = result;
+    }
+
+    public void addConfirmButtonListener(ActionListener listener) {
+        confirmButton.addActionListener(listener);
     }
 }
