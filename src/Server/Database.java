@@ -46,6 +46,7 @@ public class Database {
         }
         return flag;
     }
+
     int getUserMoney(String userName){
         int money = 0;
         try {

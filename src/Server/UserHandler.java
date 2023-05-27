@@ -49,7 +49,8 @@ public class UserHandler implements Runnable {
         if (command.startsWith("//")) {
             if (command.startsWith("//quit")) {
                 System.out.println("Connection Lost >> " + user.getName());
-                sendAll(user.getName() + "'s Connection Lost");
+                sendAll("/quit"+user.getName());
+                sendAll(user.getName() + " is exit");
             } else if (command.startsWith("//ready")) {
                 user.setReady(true);
                 sendAll(user.getName() + " is ready");

@@ -80,14 +80,11 @@ public class User { // 플레이어의 정보가 담긴 클래스
 
     public void sendCard(Card card) throws IOException {
         oos.writeObject(card);
-        oos.reset();
         oos.flush();
     }
 
     public void sendMessage(String message) throws IOException {
-        //out.println(message);
         oos.writeObject(message);
-        oos.reset();
         oos.flush();
     }
     public void chooseBetAction(int basicBet, boolean noBet) throws IOException { // basicBet = 앞 사람의 배팅금// currentBet = 현재 내놓은 배팅금

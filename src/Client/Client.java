@@ -30,6 +30,7 @@ public class Client {
             MessageReceiver messageReceiver = new MessageReceiver(socket, ois,controller);
             Thread messageReceive = new Thread(messageReceiver);
             messageReceive.start();
+
             return true;
         } catch (IOException e) {
             e.printStackTrace();
@@ -84,6 +85,18 @@ class MessageReceiver implements Runnable {
                     cards.add(card);
                 } else if (receivedObject instanceof String message) {
                     if (message.startsWith("/init")) cards.clear();
+                    else if(message.contains("/name")){
+                        String name = message.substring(5);
+                        controller.nameList.add(name);
+                    }
+                    else if(message.contains("/finish")){
+                        controller.setUserList();
+                    }
+                    else if(message.contains("/quit")){
+                        String name = message.substring(5);
+                        controller.nameList.remove(name);
+                        controller.setUserList();
+                    }
                     else controller.appendMsg(message);
                 }
             }

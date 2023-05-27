@@ -2,10 +2,14 @@ package Client;
 
 import javax.swing.*;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Controller {
     GUI gui;
     Client client;
+    Set<String> nameList = new HashSet<>();
+    boolean connectResult = false;
 
     public Controller(Client client, GUI gui) {
         this.client = client;
@@ -16,12 +20,12 @@ public class Controller {
             if (gui.onConfirm()) {
                 String name = gui.getInputName();
                 String ip = gui.getIP();
-                boolean result = client.access(ip, name);
-                if (!result) {
-                    JOptionPane.showMessageDialog(gui.getFrame(), "Failed Connection");
+                connectResult = client.access(ip, name);
+                if (!connectResult) {
+                    JOptionPane.showMessageDialog(gui.getLoginFrame(), "connection has failed.");
                 } else {
                     gui.checkConnection();
-                    gui.setResult(true);
+                    gui.setResult(connectResult);
                 }
             }
         });
@@ -52,7 +56,14 @@ public class Controller {
     }
 
     public void appendMsg(String msg) {
-        gui.getChatArea().append(msg + "\n");
+        gui.getChatList().append(msg + "\n");
         gui.getChatInput().setText("");
+    }
+
+    public void setUserList() {
+        gui.getUserList().setText(null);
+        for (String s : nameList) {
+            gui.getUserList().append(s + "\n");
+        }
     }
 }

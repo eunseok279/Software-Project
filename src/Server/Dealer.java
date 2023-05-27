@@ -102,6 +102,15 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             String name = receiveName.split(" ")[1];
             User user;
             if (db.checkUser(name)) {
+                for(User u : users){
+                    if(u.getName().equals(name)) {
+                        oos.writeObject("You need to log in with a different nickname");
+                        ois.close();
+                        oos.close();
+                        clientSocket.close();
+                        return;
+                    }
+                }
                 int userMoney = db.getUserMoney(name);
                 user = new User(clientSocket, name, oos, userMoney);
             } else {
@@ -114,6 +123,10 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             sendAll(user.getName()+" is joined");
             UserHandler handler = new UserHandler(user, users, ois, currentTracker);
             sendMsg("Welcome!!", user);
+            for(User u : users){
+                sendAll("/name"+u.getName());
+            }
+            sendAll("/finish");
             executorService.submit(handler);
         }catch (IOException | ClassNotFoundException e){
             e.printStackTrace();

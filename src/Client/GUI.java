@@ -14,10 +14,12 @@ public class GUI {
     private JTextArea chatArea = new JTextArea(40, 25);
     private TextArea ChatList = new TextArea(30, 50);
     private TextArea UserList = new TextArea(30, 15);
-    private JTextField chatInput = new JTextField(25);
-    private JButton confirmButton=new JButton("Confirm");
-    private JButton readyButton= new JButton("Ready/Unready");
-    private JButton quitButton  = new JButton("Quit");
+    private JTextField chatInput = new JTextField(45);
+    private JButton confirmButton = new JButton("Confirm");
+    private JButton readyButton = new JButton("Ready/Unready");
+    private JButton quitButton = new JButton("Quit");
+    JLabel UserLabel = new JLabel("유저 목록");
+    JLabel User = new JLabel();
     private JScrollPane scrollPane;
     private boolean result = false;
     private boolean ready = false;
@@ -81,32 +83,33 @@ public class GUI {
 
 
 
+
     // 채팅 창을 연다
     private void openChatWindow() {
-        chatFrame.setDefaultCloseOperation(chatFrame.EXIT_ON_CLOSE);
+        JPanel textAndButtonPanel = new JPanel(new FlowLayout());
+
+// Add components to the textAndButtonPanel
+        textAndButtonPanel.add(chatInput);
+        textAndButtonPanel.add(readyButton);
+        textAndButtonPanel.add(quitButton);
+
+        chatFrame.setTitle("User");
         chatFrame.setVisible(true);
-        chatFrame.setSize(750, 530);
+        chatFrame.setSize(750, 600);
         chatFrame.setResizable(false);
-        chatFrame.setLocationRelativeTo(null);
+        chatFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+        ChatList.setEditable(false);
+        UserList.setEditable(false);
 
-        scrollPane = new JScrollPane(chatArea,JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        chatFrame.add(chatArea, BorderLayout.CENTER);
-        chatFrame.add(chatInput, BorderLayout.SOUTH);
-
-
-
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-        JPanel buttonPanel = new JPanel(new BorderLayout());
-
-        buttonPanel.add(readyButton, BorderLayout.CENTER);
-        buttonPanel.add(quitButton, BorderLayout.EAST);
-
-        bottomPanel.add(chatInput, BorderLayout.CENTER);
-        bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-        chatFrame.add(chatArea, BorderLayout.CENTER);
-        chatFrame.add(bottomPanel, BorderLayout.SOUTH);
+// Add components to the main panel
+        JPanel ClientGUIPanel = new JPanel();
+        ClientGUIPanel.add(User);
+        ClientGUIPanel.add(ChatList);
+        ClientGUIPanel.add(UserLabel);
+        ClientGUIPanel.add(UserList);
+        ClientGUIPanel.add(textAndButtonPanel);
+        chatFrame.add(ClientGUIPanel);
     }
 
     public String getInputName() {
@@ -121,39 +124,50 @@ public class GUI {
         this.result = result;
     }
 
-    public void addButtonListener(JButton button,ActionListener listener) {
+    public void addButtonListener(JButton button, ActionListener listener) {
         button.addActionListener(listener);
     }
-    public void addTextFieldListener(JTextField textField,ActionListener listener) {
+
+    public void addTextFieldListener(JTextField textField, ActionListener listener) {
         textField.addActionListener(listener);
     }
 
 
-    public JFrame getFrame() {
+    public JFrame getLoginFrame() {
         return frame;
     }
-    public  JFrame getChatFrame(){
+
+    public JFrame getChatFrame() {
         return chatFrame;
     }
-    public JTextField getChatInput(){
+
+    public JTextField getChatInput() {
         return chatInput;
     }
-    public JTextArea getChatArea(){
-        return chatArea;
+    public TextArea getChatList() {
+        return ChatList;
     }
-    public JButton getConfirmButton(){
+    public TextArea getUserList() {
+        return UserList;
+    }
+
+    public JButton getConfirmButton() {
         return confirmButton;
     }
-    public  JButton getReadyButton(){
+
+    public JButton getReadyButton() {
         return readyButton;
     }
+
     public JButton getQuitButton() {
         return quitButton;
     }
-    public boolean isReady(){
+
+    public boolean isReady() {
         return ready;
     }
-    public void setReady(boolean ready){
+
+    public void setReady(boolean ready) {
         this.ready = ready;
     }
 }
