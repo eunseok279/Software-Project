@@ -9,8 +9,6 @@ public class UserHandler implements Runnable {
     private final List<User> users;
     ObjectInputStream ois;
     CurrentTracker currentTracker;
-    boolean isQuit = false;
-
     public UserHandler(User user, List<User> users, ObjectInputStream ois, CurrentTracker currentTracker) throws IOException {
         this.user = user;
         this.users = users;
@@ -52,7 +50,6 @@ public class UserHandler implements Runnable {
             if (command.startsWith("//quit")) {
                 System.out.println("Connection Lost >> " + user.getName());
                 sendAll(user.getName() + "'s Connection Lost");
-                isQuit = true;
             } else if (command.startsWith("//ready")) {
                 user.setReady(true);
                 sendAll(user.getName() + " is ready");

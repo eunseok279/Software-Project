@@ -6,16 +6,23 @@ import java.awt.event.ActionListener;
 
 public class GUI {
 
-    private JFrame frame;
-    private JTextField nicknameField;
-    private JTextField serverIPField;
-    private JButton confirmButton;
-    private boolean result =false;
+    private final JFrame frame = new JFrame("Connect");
+    private final JFrame chatFrame = new JFrame("User");
+    private final JTextField nicknameField;
+    private final JTextField serverIPField;
+    private static final long serialVersionUID = 1L;
+    private JTextArea chatArea = new JTextArea(40, 25);
+    private TextArea ChatList = new TextArea(30, 50);
+    private TextArea UserList = new TextArea(30, 15);
+    private JTextField chatInput = new JTextField(25);
+    private JButton confirmButton=new JButton("Confirm");
+    private JButton readyButton= new JButton("Ready/Unready");
+    private JButton quitButton  = new JButton("Quit");
+    private JScrollPane scrollPane;
+    private boolean result = false;
+    private boolean ready = false;
 
     public GUI() {
-        // 프레임 초기화
-        frame = new JFrame("Poker Client");
-
         // 프레임이 닫힐 때 프로그램도 종료하도록 설정
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -35,9 +42,6 @@ public class GUI {
         serverIPField = new JTextField("Localhost", 15); // 텍스트필드 길이 설정
         serverIPPanel.add(serverIPField);
         frame.add(serverIPPanel);
-
-        // 확인 버튼 추가
-        confirmButton = new JButton("Confirm");
         frame.add(confirmButton);
 
         // 프레임 크기 설정 및 프레임 보이게 설정
@@ -58,24 +62,51 @@ public class GUI {
         return true;
     }
 
-    public void openChat() {
+    public void checkConnection() {
         Runnable checkConnect = () -> {
             while (true) {
                 if (result) break;
-                try{
+                try {
                     Thread.sleep(1000);
-                }catch (InterruptedException e){
+                } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
             }
             JOptionPane.showMessageDialog(frame, "Connecting!!");
-            System.out.println("Thread out");
-        }; new Thread(checkConnect).start();
+            frame.dispose();
+            openChatWindow();
+        };
+        new Thread(checkConnect).start();
     }
 
+
+
     // 채팅 창을 연다
-    private void openChatWindow(String nickname, String serverIP) {
-        // ... 여기서 채팅 창 구현
+    private void openChatWindow() {
+        chatFrame.setDefaultCloseOperation(chatFrame.EXIT_ON_CLOSE);
+        chatFrame.setVisible(true);
+        chatFrame.setSize(750, 530);
+        chatFrame.setResizable(false);
+        chatFrame.setLocationRelativeTo(null);
+
+
+        scrollPane = new JScrollPane(chatArea,JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        chatFrame.add(chatArea, BorderLayout.CENTER);
+        chatFrame.add(chatInput, BorderLayout.SOUTH);
+
+
+
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        JPanel buttonPanel = new JPanel(new BorderLayout());
+
+        buttonPanel.add(readyButton, BorderLayout.CENTER);
+        buttonPanel.add(quitButton, BorderLayout.EAST);
+
+        bottomPanel.add(chatInput, BorderLayout.CENTER);
+        bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        chatFrame.add(chatArea, BorderLayout.CENTER);
+        chatFrame.add(bottomPanel, BorderLayout.SOUTH);
     }
 
     public String getInputName() {
@@ -90,7 +121,39 @@ public class GUI {
         this.result = result;
     }
 
-    public void addConfirmButtonListener(ActionListener listener) {
-        confirmButton.addActionListener(listener);
+    public void addButtonListener(JButton button,ActionListener listener) {
+        button.addActionListener(listener);
+    }
+    public void addTextFieldListener(JTextField textField,ActionListener listener) {
+        textField.addActionListener(listener);
+    }
+
+
+    public JFrame getFrame() {
+        return frame;
+    }
+    public  JFrame getChatFrame(){
+        return chatFrame;
+    }
+    public JTextField getChatInput(){
+        return chatInput;
+    }
+    public JTextArea getChatArea(){
+        return chatArea;
+    }
+    public JButton getConfirmButton(){
+        return confirmButton;
+    }
+    public  JButton getReadyButton(){
+        return readyButton;
+    }
+    public JButton getQuitButton() {
+        return quitButton;
+    }
+    public boolean isReady(){
+        return ready;
+    }
+    public void setReady(boolean ready){
+        this.ready = ready;
     }
 }

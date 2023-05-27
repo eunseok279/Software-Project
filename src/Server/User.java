@@ -90,19 +90,6 @@ public class User { // 플레이어의 정보가 담긴 클래스
         oos.reset();
         oos.flush();
     }
-
-//    public String receiveAck() throws IOException, ClassNotFoundException {
-//        InputStream is = socket.getInputStream();
-//
-//        // ObjectInputStream을 생성한다.
-//        ObjectInputStream ois = new ObjectInputStream(is);
-//
-//        // 클라이언트로부터 메시지를 받는다.
-//        String ack = (String) ois.readObject();
-//
-//        return ack;
-//    }
-
     public void chooseBetAction(int basicBet, boolean noBet) throws IOException { // basicBet = 앞 사람의 배팅금// currentBet = 현재 내놓은 배팅금
         while (true) {
             command = null;
