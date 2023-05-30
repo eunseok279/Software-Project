@@ -3,6 +3,7 @@ package Client;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowListener;
 
 public class GUI {
 
@@ -81,9 +82,6 @@ public class GUI {
         new Thread(checkConnect).start();
     }
 
-
-
-
     // 채팅 창을 연다
     private void openChatWindow() {
         JPanel textAndButtonPanel = new JPanel(new FlowLayout());
@@ -130,6 +128,9 @@ public class GUI {
 
     public void addTextFieldListener(JTextField textField, ActionListener listener) {
         textField.addActionListener(listener);
+    }
+    public void addWindowListener(JFrame frame, WindowListener listener){
+        frame.addWindowListener(listener);
     }
 
 

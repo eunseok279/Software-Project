@@ -70,8 +70,10 @@ public class User { // 플레이어의 정보가 담긴 클래스
         return ready;
     }
 
-    public void setReady(boolean ready) {
+    public void setReady(boolean ready) throws IOException {
         this.ready = ready;
+        if(ready) sendMessage("/ready");
+        else sendMessage("/unready");
     }
 
     public Socket getSocket() {
@@ -109,9 +111,10 @@ public class User { // 플레이어의 정보가 담긴 클래스
                             command = null;
                         }
                     } else if (command.startsWith("/fold")) { // 폴드
-                        bet.fold();
+                        result = bet.fold();
                         break;
                     } else if (command.startsWith("/check")) { // 체크
+                        result = true;
                         break;
                     } else {
                         sendMessage("Wrong Choice");
@@ -132,7 +135,7 @@ public class User { // 플레이어의 정보가 담긴 클래스
                             else break;
                         }
                     } else if (command.startsWith("/fold")) { // 폴드
-                        bet.fold();
+                        result =bet.fold();
                         break;
                     } else if (command.startsWith("/check")) { // 체크 (빅블라인드만 예외적으로 사용가능)
                         result = bet.check();

@@ -72,8 +72,9 @@ public class Bet { // 배팅 방식
         return true;
     }
 
-    public void fold() {
+    public boolean fold() {
         user.setState(User.State.FOLD);
+        return true;
     }
 
     public boolean allIn() {

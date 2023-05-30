@@ -36,6 +36,8 @@ public class UserHandler implements Runnable {
             throw new RuntimeException(e);
         } finally {
             try {
+                sendAll("/quit"+user.getName());
+                sendAll(user.getName() + " is exit");
                 user.getSocket().close();
                 users.remove(user);
                 System.out.println(user.getName() + " is exit");

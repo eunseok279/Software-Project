@@ -97,6 +97,12 @@ class MessageReceiver implements Runnable {
                         controller.nameList.remove(name);
                         controller.setUserList();
                     }
+                    else if(message.startsWith("/unready")){
+                        controller.gui.setReady(false);
+                    }
+                    else if(message.startsWith("/ready")){
+                        controller.gui.setReady(true);
+                    }
                     else controller.appendMsg(message);
                 }
             }

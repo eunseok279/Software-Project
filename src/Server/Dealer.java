@@ -334,6 +334,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         List<User> currentWinners = new ArrayList<>();
         Iterator<User> itr = pot.potUser.iterator();
         User currentUser = itr.next();
+
         currentWinners.add(currentUser);
 
         while (itr.hasNext()) {

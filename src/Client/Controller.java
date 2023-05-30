@@ -1,6 +1,9 @@
 package Client;
 
 import javax.swing.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
@@ -51,6 +54,17 @@ public class Controller {
                 gui.getChatFrame().dispose();
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
+            }
+        });
+        this.gui.addWindowListener(gui.getChatFrame(), new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                try {
+                    client.socket.close();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+                System.exit(0);
             }
         });
     }

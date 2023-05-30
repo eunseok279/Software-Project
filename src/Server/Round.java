@@ -70,8 +70,8 @@ public class Round {
             noBetting = true;
             currentTracker.index = findIfSBFold();
             playRound();
-            calculatePot();
         }
+        calculatePot();
     }
 
     public void playRound() throws IOException {
@@ -81,6 +81,7 @@ public class Round {
         while (turn < userCount) {
             User currentUser = users.get(currentTracker.index);
             if (canUserBet(currentUser)) {
+                if(!checkRemainUser(users))break;
                 currentUser.sendMessage("Your Turn");
                 if (allin) { // 올인 상태 발생
                     int ownMoney = currentUser.getMoney() + currentUser.getCurrentBet();
@@ -98,8 +99,6 @@ public class Round {
                     currentUser.sendMessage("Minimum Raise >> " + 2 * (basicBet - currentUser.getCurrentBet()));
                     currentUser.chooseBetAction(basicBet, false);
                 }
-
-                if (currentUser.getState() == User.State.ALLIN) break; // 올인 발생
 
                 switch (currentUser.getState()) {
                     case CALL, CHECK -> turn++;
