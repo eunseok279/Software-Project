@@ -61,6 +61,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                     if (allReady) {
                         try {
                             sendAll("All users are ready. Starting the game...");
+                            sendAll("/game");
                             System.out.println("game is start");
                             for (User user : users) {
                                 user.setReady(false);

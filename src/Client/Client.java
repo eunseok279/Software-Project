@@ -82,34 +82,44 @@ class MessageReceiver implements Runnable {
             Object receivedObject;
             while ((receivedObject = ois.readObject()) != null) {
                 if (receivedObject instanceof Card card) {
-                    cards.add(card);
+
                 } else if (receivedObject instanceof String message) {
-                    if (message.startsWith("/init")) cards.clear();
-                    else if(message.contains("/name")){
-                        String name = message.substring(5);
-                        controller.nameList.add(name);
+                    if(message.startsWith("/"))
+                        command(message);
+                    else {
+                        controller.appendMsg(message);
                     }
-                    else if(message.contains("/finish")){
-                        controller.setUserList();
-                    }
-                    else if(message.contains("/quit")){
-                        String name = message.substring(5);
-                        controller.nameList.remove(name);
-                        controller.setUserList();
-                    }
-                    else if(message.startsWith("/unready")){
-                        controller.gui.setReady(false);
-                    }
-                    else if(message.startsWith("/ready")){
-                        controller.gui.setReady(true);
-                    }
-                    else controller.appendMsg(message);
                 }
             }
             ois.close();
             socket.close();
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void command(String message) {
+        if (message.startsWith("/init")) cards.clear();
+        else if(message.contains("/name")){
+            String name = message.substring(5);
+            controller.nameList.add(name);
+        }
+        else if(message.contains("/finish")){
+            controller.setUserList();
+        }
+        else if(message.contains("/quit")){
+            String name = message.substring(5);
+            controller.nameList.remove(name);
+            controller.setUserList();
+        }
+        else if(message.startsWith("/unready")){
+            controller.gui.setReady(false);
+        }
+        else if(message.startsWith("/ready")){
+            controller.gui.setReady(true);
+        }
+        else if(message.startsWith("/game")){
+            controller.gui.startGame();
         }
     }
 }

@@ -24,7 +24,7 @@ enum Rank {
 }
 
 enum Suit {
-    CLUBS("♣"), DIAMONDS("◆"), HEARTS("♥"), SPADES("♠");
+    CLUBS("C"), DIAMONDS("D"), HEARTS("H"), SPADES("S");
 
     private final String name;
 
