@@ -186,6 +186,11 @@ public class Round {
     Runnable CheckConnect = () ->{
       while(true){
           users.removeIf(user -> !user.getSocket().isConnected());
+          try {
+              Thread.sleep(1000);
+          } catch (InterruptedException e) {
+              throw new RuntimeException(e);
+          }
       }
     };
 }
