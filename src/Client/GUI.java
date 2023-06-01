@@ -100,8 +100,7 @@ public class GUI {
 
         chatFrame.setTitle("User");
         chatFrame.setVisible(true);
-        chatFrame.setSize(750, 600);
-        chatFrame.setResizable(false);
+        chatFrame.setSize(1000, 600);
         chatFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         ChatList.setEditable(false);
@@ -339,7 +338,7 @@ class GameGUI {
 
         // Set the frame properties
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(1500, 800);
+        frame.setSize(1400, 800);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }

@@ -17,5 +17,6 @@
         <jarDirectory url="file://C:/Program Files (x86)/MySQL/Connector J 8.0" recursive="false" />
       </library>
     </orderEntry>
+    <orderEntry type="library" name="mysql-connector-j-8.0.33" level="project" />
   </component>
 </module>

@@ -41,6 +41,8 @@ public class UserHandler implements Runnable {
                 user.getSocket().close();
                 users.remove(user);
                 System.out.println(user.getName() + " is exit");
+                ois.close();
+                user.closeOOS();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -53,6 +55,7 @@ public class UserHandler implements Runnable {
                 System.out.println("Connection Lost >> " + user.getName());
                 sendAll("/quit"+user.getName());
                 sendAll(user.getName() + " is exit");
+                user.getSocket().close();
             } else if (command.startsWith("//ready")) {
                 user.setReady(true);
                 sendAll(user.getName() + " is ready");

@@ -209,6 +209,7 @@ public class User { // 플레이어의 정보가 담긴 클래스
     public int getCurrentBet() {
         return currentBet;
     }
+    public void closeOOS() throws IOException {oos.close();}
 }
 
 

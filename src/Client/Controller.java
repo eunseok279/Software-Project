@@ -83,6 +83,7 @@ public class Controller {
             @Override
             public void windowClosing(WindowEvent e) {
                 try {
+                    client.sendMessage("//quit");
                     client.socket.close();
                 } catch (IOException ex) {
                     ex.printStackTrace();

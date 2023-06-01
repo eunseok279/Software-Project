@@ -109,6 +109,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                         ois.close();
                         oos.close();
                         clientSocket.close();
+                        users.remove(u);
                         return;
                     }
                 }
