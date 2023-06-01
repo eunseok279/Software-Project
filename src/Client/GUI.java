@@ -197,6 +197,9 @@ public class GUI {
 }
 
 class GameGUI {
+    private final JPanel communityPanel;
+    private final JPanel personalPanel;
+    Map<String, Image> cardImages = new HashMap<>();
     private final JFrame frame;
     private final JButton foldButton;
     private final JButton checkButton;
@@ -214,6 +217,19 @@ class GameGUI {
 
 
     public GameGUI() {
+        try {
+            for (String suit : new String[]{"C", "D", "H", "S"}) {  // Clubs, Diamonds, Hearts, Spades
+                for (int i = 2; i <= 14; i++) {  // Card ranks from 1 (Ace) to 13 (King)
+                    BufferedImage originalImage = ImageIO.read(new File("card/" + i + suit + ".png"));
+                    int width = 100;  // the width you want
+                    int height = 130;  // the height you want
+                    Image image = originalImage.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                    cardImages.put(i + suit, image);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         frame = new JFrame("Poker Game");
 
@@ -258,8 +274,10 @@ class GameGUI {
 
         // Center
         JPanel centerPanel = new JPanel(new GridLayout(3, 1));
-        JPanel communityPanel = new JPanel(new FlowLayout());
-        JPanel personalPanel = new JPanel(new FlowLayout());
+        communityPanel = new JPanel(new FlowLayout());
+        personalPanel = new JPanel(new FlowLayout());
+        personalPanel.add(new JLabel(new ImageIcon(cardImages.get("2C"))));
+        personalPanel.add(new JLabel(new ImageIcon(cardImages.get("2C"))));
         centerPanel.add(new JPanel());
         centerPanel.add(communityPanel);
         centerPanel.add(personalPanel);
