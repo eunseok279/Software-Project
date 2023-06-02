@@ -7,12 +7,12 @@ import java.util.List;
 public class UserHandler implements Runnable {
     private final User user;
     private final List<User> users;
-    ObjectInputStream ois;
+    BufferedReader in;
     CurrentTracker currentTracker;
-    public UserHandler(User user, List<User> users, ObjectInputStream ois, CurrentTracker currentTracker) throws IOException {
+    public UserHandler(User user, List<User> users, BufferedReader in, CurrentTracker currentTracker) throws IOException {
         this.user = user;
         this.users = users;
-        this.ois = ois;
+        this.in = in;
         this.currentTracker = currentTracker;
     }
 
@@ -20,29 +20,26 @@ public class UserHandler implements Runnable {
     public void run() {
         try {
             String message;
-            while (!user.getSocket().isClosed()) {
-                message = (String) ois.readObject();
+            while ((message = in.readLine()) != null) {
                 if (message.startsWith("/")) {
                     handleCommand(message);
                 } else {
                     handleChat(message);
                 }
             }
-        } catch (SocketException e) {
+        }
+        catch (SocketException e) {
             currentTracker.index--;
         } catch (IOException e) {
             e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
         } finally {
             try {
                 sendAll("/quit"+user.getName());
                 sendAll(user.getName() + " is exit");
+                in.close();
                 user.getSocket().close();
                 users.remove(user);
                 System.out.println(user.getName() + " is exit");
-                ois.close();
-                user.closeOOS();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -75,7 +72,7 @@ public class UserHandler implements Runnable {
                         user.setCommand(command);
                     } while (!user.getResult());
                     user.sendMessage("Turn End");
-                } else user.sendMessage(currentUser.getName() + "'s turn");
+                } else user.sendMessage("/error"+currentUser.getName() + "'s turn");
             }
         }
     }

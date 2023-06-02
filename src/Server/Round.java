@@ -14,6 +14,7 @@ public class Round {
     private int baseBet;
     boolean noBetting = false;
     int userCount;
+    int potMoney;
 
     public Round(List<User> users, int baseBet, CurrentTracker currentTracker) {
         this.users = users;
@@ -23,6 +24,7 @@ public class Round {
         this.baseBet = baseBet;
         this.userCount = users.size();
         new Thread(CheckConnect);
+        potMoney = 0;
     }
 
     public void smallBlind() throws IOException { // 시작 강제 베팅
@@ -99,7 +101,10 @@ public class Round {
                     currentUser.sendMessage("Minimum Raise >> " + 2 * (basicBet - currentUser.getCurrentBet()));
                     currentUser.chooseBetAction(basicBet, false);
                 }
-
+                currentUser.sendMessage("/money"+currentUser.getMoney());
+                currentUser.sendMessage("/bet"+currentUser.getCurrentBet());
+                potMoney+= currentUser.getMoney();
+                currentUser.sendMessage("/pot"+potMoney);
                 switch (currentUser.getState()) {
                     case CALL, CHECK -> turn++;
                     case RAISE -> { // 첫 배팅도 레이즈 상태
@@ -132,7 +137,7 @@ public class Round {
                 pot.plusPot(user.getCurrentBet(), user);
                 if (!(user.getState() == User.State.FOLD)) pot.potUser.add(user);
             }
-        } else {
+        } else { // 올인이 발생한 경우에만
             for (Pot pot : pots) {
                 int min = minAllin();
                 for (User user : users) {
@@ -185,7 +190,11 @@ public class Round {
 
     Runnable CheckConnect = () ->{
       while(true){
-          users.removeIf(user -> !user.getSocket().isConnected());
+          for(User user: users)
+              if(!user.getSocket().isConnected()) {
+                  user.setCommand("/fold");
+                  users.remove(user);
+              }
           try {
               Thread.sleep(1000);
           } catch (InterruptedException e) {

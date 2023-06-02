@@ -52,6 +52,7 @@ public class Hand {
 
     private boolean isTwoPair() {
         Map<Rank, Integer> rankCountMap = new HashMap<>();
+        if(cards.size()<=4) return false;
 
         for (Card card : cards) {
             rankCountMap.put(card.rank(), rankCountMap.getOrDefault(card.rank(), 0) + 1);
@@ -192,7 +193,7 @@ public class Hand {
     }
 
     public void showPedigree() {
-        System.out.println("Your pedigree >> " + this.determineHandRank());
+        System.out.println("/rank" + this.determineHandRank());
     }
 
     public void showHand() {

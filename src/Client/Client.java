@@ -1,33 +1,30 @@
 package Client;
 
-import Server.User;
-
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 
 public class Client {
     GUI gui;
     Controller controller;
     Socket socket;
-    ObjectOutputStream oos;
-    ObjectInputStream ois;
-    public Client(){
+    BufferedReader in;
+    PrintWriter out;
+
+    public Client() {
         gui = new GUI();
-        controller = new Controller(this,gui);
+        controller = new Controller(this, gui);
     }
-    public boolean access(String serverAddress,String name) {
+
+    public boolean access(String serverAddress, String name) {
         try {
             socket = new Socket(serverAddress, 8080);
-            oos = new ObjectOutputStream(socket.getOutputStream());
-            ois = new ObjectInputStream(socket.getInputStream());
-            oos.writeObject("/name " + name);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            out = new PrintWriter(socket.getOutputStream());
+            sendMessage("/name"+name);
 
-            MessageReceiver messageReceiver = new MessageReceiver(socket, ois,controller);
+            MessageReceiver messageReceiver = new MessageReceiver(socket, in, controller);
             Thread messageReceive = new Thread(messageReceiver);
             messageReceive.start();
 
@@ -37,10 +34,11 @@ public class Client {
             return false;
         }
     }
+
     public void sendMessage(String message) throws IOException {
-        oos.writeObject(message);
+        out.write(message+"\n");
+        out.flush();
         executeCommand(message);
-        oos.flush();
     }
 
     private void executeCommand(String message) {
@@ -64,62 +62,81 @@ public class Client {
         new Client();
     }
 }
+
 class MessageReceiver implements Runnable {
     private final Socket socket;
     Controller controller;
-    ObjectInputStream ois;
+    BufferedReader in;
     List<Card> cards = new ArrayList<>();
 
-    public MessageReceiver(Socket socket, ObjectInputStream ois,Controller controller) {
+    public MessageReceiver(Socket socket, BufferedReader in, Controller controller) {
         this.socket = socket;
-        this.ois = ois;
+        this.in = in;
         this.controller = controller;
     }
 
     @Override
     public void run() {
         try {
-            Object receivedObject;
-            while ((receivedObject = ois.readObject()) != null) {
-                if (receivedObject instanceof Card card) {
-
-                } else if (receivedObject instanceof String message) {
-                    if(message.startsWith("/"))
-                        command(message);
-                    else {
-                        controller.appendMsg(message);
-                    }
+            String message;
+            while ((message = in.readLine()) != null) {
+                if (message.startsWith("/")) command(message);
+                else {
+                    controller.appendMsg(message);
                 }
             }
-            ois.close();
+            in.close();
             socket.close();
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException e) {
             e.printStackTrace();
+        }finally {
+            try {
+                if (in != null) {
+                    in.close();
+                }
+                if (socket != null) {
+                    socket.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
     private void command(String message) {
         if (message.startsWith("/init")) cards.clear();
-        else if(message.contains("/name")){
+        else if (message.contains("/name")) {
             String name = message.substring(5);
             controller.nameList.add(name);
-        }
-        else if(message.contains("/finish")){
+        } else if (message.contains("/finish")) {
             controller.setUserList();
-        }
-        else if(message.contains("/quit")){
+        } else if (message.contains("/quit")) {
             String name = message.substring(5);
             controller.nameList.remove(name);
             controller.setUserList();
-        }
-        else if(message.startsWith("/unready")){
+        } else if (message.startsWith("/unready")) {
             controller.gui.setReady(false);
-        }
-        else if(message.startsWith("/ready")){
+        } else if (message.startsWith("/ready")) {
             controller.gui.setReady(true);
+        } else if (message.startsWith("/game")) {
+            controller.startGame();
+        } else if (message.startsWith("/money")) {
+            controller.appendInfo(message);
+        } else if (message.startsWith("/bet")) {
+            controller.appendInfo(message);
+        } else if (message.startsWith("/pot")) {
+            controller.appendInfo(message);
+
+        } else if(message.startsWith("/rank")){
+            controller.appendInfo(message);
+        }else if (message.startsWith("/win")) {
+            String index = message.substring(4);
+            controller.winner(index);
         }
-        else if(message.startsWith("/game")){
-            controller.gui.startGame();
+        else if(message.startsWith("/card")){
+            String suit = message.substring(5,6);
+            String rank = message.substring(6);
+            controller.addCard(suit,rank);
         }
     }
 }

@@ -6,12 +6,12 @@ import java.sql.SQLException;
 
 public class Game {
     Dealer dealer = new Dealer();
-    public Game() throws ClassNotFoundException, SQLException {
+    public Game() throws ClassNotFoundException, SQLException, IOException {
         int port = 8080;
         dealer.setUpGame(port);
     }
 
-    public static void main(String[] args) throws IOException, SQLException, ClassNotFoundException {
+    public static void main(String[] args) throws SQLException, ClassNotFoundException, IOException {
         new Game();
     }
 }

@@ -2,6 +2,7 @@ package Server;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
 import java.net.Socket;
 
 public class User { // 플레이어의 정보가 담긴 클래스
@@ -17,24 +18,24 @@ public class User { // 플레이어의 정보가 담긴 클래스
     private State state = State.LIVE;
     private boolean ready = false;
     private final Socket socket;
-    ObjectOutputStream oos;
+    PrintWriter out;
     //PrintWriter out;
-    private String command;
+    private String command = null;
     private boolean result;
 
-    public User(Socket socket, String name, ObjectOutputStream oos, int money) throws IOException {
-        this(socket, name, oos);
+    public User(Socket socket, String name, PrintWriter out, int money) throws IOException {
+        this(socket, name, out);
         this.money = money;
         this.currentBet = 0;
         bet = new Bet(this);
         hand = new Hand();
     }
 
-    public User(Socket socket, String name, ObjectOutputStream oos) throws IOException {
+    public User(Socket socket, String name, PrintWriter out) throws IOException {
         this.socket = socket;
         this.name = name;
         this.money = 200;
-        this.oos = oos;
+        this.out = out;
         this.currentBet = 0;
         bet = new Bet(this);
         hand = new Hand();
@@ -80,18 +81,14 @@ public class User { // 플레이어의 정보가 담긴 클래스
         return socket;
     }
 
-    public void sendCard(Card card) throws IOException {
-        oos.writeObject(card);
-        oos.flush();
-    }
+
 
     public void sendMessage(String message) throws IOException {
-        oos.writeObject(message);
-        oos.flush();
+        out.write(message+"\n");
+        out.flush();
     }
     public void chooseBetAction(int basicBet, boolean noBet) throws IOException { // basicBet = 앞 사람의 배팅금// currentBet = 현재 내놓은 배팅금
         while (true) {
-            command = null;
             try {
                 Thread.sleep(100); // 0.1초마다 확인
             } catch (InterruptedException e) {
@@ -99,17 +96,11 @@ public class User { // 플레이어의 정보가 담긴 클래스
             }
             if (command != null) {  // 입력이 됐으면
                 if (noBet) { // 아무도 배팅을 안한 상태
-                    if (command.startsWith("/bet")) { // 배팅
-                        String[] parts = command.split(" ");
-                        if (parts.length == 2) {
-                            int betMoney = Integer.parseInt(parts[1]);
-                            result = bet.bet(betMoney);
-                            if (!result) command = null;
-                            else break;
-                        } else {
-                            sendMessage("Wrong Input");
-                            command = null;
-                        }
+                    if (command.startsWith("/raise")) { // 배팅
+                        int betMoney = Integer.parseInt(command.substring(6));
+                        result = bet.bet(betMoney);
+                        if (!result) command = null;
+                        else break;
                     } else if (command.startsWith("/fold")) { // 폴드
                         result = bet.fold();
                         break;
@@ -127,13 +118,10 @@ public class User { // 플레이어의 정보가 담긴 클래스
                         if (!result) command = null;
                         else break;
                     } else if (command.startsWith("/raise")) { // 레이즈
-                        String[] parts = command.split(" ");
-                        if (parts.length == 2) {
-                            int raiseMoney = Integer.parseInt(parts[1]);
-                            result = bet.raise(raiseMoney, currentBet, basicBet);
-                            if (!result) command = null;
-                            else break;
-                        }
+                        int raiseMoney = Integer.parseInt(command.substring(6));
+                        result = bet.raise(raiseMoney, currentBet, basicBet);
+                        if (!result) command = null;
+                        else break;
                     } else if (command.startsWith("/fold")) { // 폴드
                         result =bet.fold();
                         break;
@@ -180,24 +168,18 @@ public class User { // 플레이어의 정보가 담긴 클래스
                         bet.fold();
                         break;
                     } else if (command.startsWith("/raise")) {
-                        String[] parts = command.split(" ");
-                        if (parts.length == 2) {
-                            int raiseMoney = Integer.parseInt(parts[1]);
+                            int raiseMoney = Integer.parseInt(command.substring(6));
                             result = bet.raise(raiseMoney, currentBet, basicBet);
                             if (!result) command = null;
                             else break;
-                        }
                     }
                 }
             }
         }
     }
-
-
     public void setCommand(String command) {
         this.command = command;
     }
-
     public boolean getResult() {
         return result;
     }
@@ -209,7 +191,7 @@ public class User { // 플레이어의 정보가 담긴 클래스
     public int getCurrentBet() {
         return currentBet;
     }
-    public void closeOOS() throws IOException {oos.close();}
+    public void closeStream() {out.close();}
 }
 
 

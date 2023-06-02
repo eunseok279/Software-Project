@@ -20,7 +20,7 @@ public class Card implements Serializable { // 카드의 정보가 담길 클래
     }
 
     public String showCard() {
-        return suit.getName() + rank.getName();
+        return suit.getName() + rank.getRank();
     }
 }
 
@@ -38,6 +38,7 @@ enum Rank {
     public String getName(){
         return name;
     }
+    public int getRank(){return rank;}
 }
 
 enum Suit {
