@@ -1,11 +1,11 @@
 package Server;
 
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public class User { // 플레이어의 정보가 담긴 클래스
+public class User {
+    // 플레이어의 정보가 담긴 클래스
     enum State {
         LIVE, FOLD, CALL, RAISE, ALLIN, CHECK, DEPLETED
     }
@@ -14,6 +14,7 @@ public class User { // 플레이어의 정보가 담긴 클래스
     Bet bet;
     private final String name;
     private int money;
+    private int betting;
     private int currentBet;
     private State state = State.LIVE;
     private boolean ready = false;
@@ -22,11 +23,14 @@ public class User { // 플레이어의 정보가 담긴 클래스
     //PrintWriter out;
     private String command = null;
     private boolean result;
+    private boolean ack;
+    StringBuilder cards;
 
     public User(Socket socket, String name, PrintWriter out, int money) throws IOException {
         this(socket, name, out);
         this.money = money;
-        this.currentBet = 0;
+        this.betting = 0;
+        this.betting = 0;
         bet = new Bet(this);
         hand = new Hand();
     }
@@ -36,11 +40,11 @@ public class User { // 플레이어의 정보가 담긴 클래스
         this.name = name;
         this.money = 200;
         this.out = out;
-        this.currentBet = 0;
+        this.betting = 0;
+        this.betting = 0;
         bet = new Bet(this);
         hand = new Hand();
     }
-
 
     public String getName() {
         return name;
@@ -54,8 +58,17 @@ public class User { // 플레이어의 정보가 담긴 클래스
         this.state = state;
     }
 
+    public int getCurrentBet() {
+        return currentBet;
+    }
+
+    public void setCurrentBet() {
+        this.currentBet = 0;
+    }
+
     public void betMoney(int money) {
         this.currentBet += money;
+        this.betting += money;
         this.money -= money;
     }
 
@@ -73,7 +86,7 @@ public class User { // 플레이어의 정보가 담긴 클래스
 
     public void setReady(boolean ready) throws IOException {
         this.ready = ready;
-        if(ready) sendMessage("/ready");
+        if (ready) sendMessage("/ready");
         else sendMessage("/unready");
     }
 
@@ -81,12 +94,34 @@ public class User { // 플레이어의 정보가 담긴 클래스
         return socket;
     }
 
-
-
     public void sendMessage(String message) throws IOException {
-        out.write(message+"\n");
+        out.write(message + "\n");
         out.flush();
     }
+
+    public void sendPersonalCard() throws IOException, InterruptedException {
+        cards = new StringBuilder();
+        cards.append("/card").append(" ");
+        cards.append(hand.cards.get(0).showCard()).append(" ");
+        cards.append(hand.cards.get(1).showCard()).append(" ");
+        cards.append("/rank").append(hand.determineHandRank().name());
+        String message = cards.toString();
+        sendMessage(message);
+        sendACK();
+    }
+
+    public void sendACK() throws InterruptedException {
+        ack = true;
+        while (ack) {
+            Thread.sleep(1000);
+        }
+        ack = true;
+    }
+
+    void receiveACK() {
+        ack = false;
+    }
+
     public void chooseBetAction(int basicBet, boolean noBet) throws IOException { // basicBet = 앞 사람의 배팅금// currentBet = 현재 내놓은 배팅금
         while (true) {
             try {
@@ -114,16 +149,16 @@ public class User { // 플레이어의 정보가 담긴 클래스
                     }
                 } else {    // 누가 배팅한 상태 -> 콜하거나 레이즈 혹은 폴드
                     if (command.startsWith("/call")) { // 콜
-                        result = bet.call(basicBet - currentBet); // 기본 배팅 - 나의 배팅금
+                        result = bet.call(basicBet - betting); // 기본 배팅 - 나의 배팅금
                         if (!result) command = null;
                         else break;
                     } else if (command.startsWith("/raise")) { // 레이즈
                         int raiseMoney = Integer.parseInt(command.substring(6));
-                        result = bet.raise(raiseMoney, currentBet, basicBet);
+                        result = bet.raise(raiseMoney, betting, basicBet);
                         if (!result) command = null;
                         else break;
                     } else if (command.startsWith("/fold")) { // 폴드
-                        result =bet.fold();
+                        result = bet.fold();
                         break;
                     } else if (command.startsWith("/check")) { // 체크 (빅블라인드만 예외적으로 사용가능)
                         result = bet.check();
@@ -161,37 +196,42 @@ public class User { // 플레이어의 정보가 담긴 클래스
                     }
                 } else {
                     if (command.startsWith("/call")) {
-                        result = bet.call(basicBet - currentBet); // 기본 배팅 - 나의 배팅금
+                        result = bet.call(basicBet - betting); // 기본 배팅 - 나의 배팅금
                         if (!result) command = null;
                         else break;
                     } else if (command.startsWith("/fold")) {
                         bet.fold();
                         break;
                     } else if (command.startsWith("/raise")) {
-                            int raiseMoney = Integer.parseInt(command.substring(6));
-                            result = bet.raise(raiseMoney, currentBet, basicBet);
-                            if (!result) command = null;
-                            else break;
+                        int raiseMoney = Integer.parseInt(command.substring(6));
+                        result = bet.raise(raiseMoney, betting, basicBet);
+                        if (!result) command = null;
+                        else break;
                     }
                 }
             }
         }
     }
+
     public void setCommand(String command) {
         this.command = command;
     }
+
     public boolean getResult() {
         return result;
     }
 
-    public void setCurrentBet(int amt) {
-        currentBet = amt;
+    public void setBetting(int amt) {
+        betting = amt;
     }
 
-    public int getCurrentBet() {
-        return currentBet;
+    public int getBetting() {
+        return betting;
     }
-    public void closeStream() {out.close();}
+
+    public void closeStream() {
+        out.close();
+    }
 }
 
 

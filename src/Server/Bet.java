@@ -7,7 +7,6 @@ public class Bet { // 배팅 방식
 
     public Bet(User user) {
         this.user = user;
-        int betting = user.getCurrentBet();
     }
 
     public boolean bet(int betMoney) throws IOException { // 각 라운드 첫 배팅(프리플랍 제외)
@@ -67,7 +66,7 @@ public class Bet { // 배팅 방식
             return call(raiseMoney);
         }
         user.betMoney(raiseMoney);
-        Round.setBasicBet(user.getCurrentBet()); // 레이즈에 성공하면 기본 배팅금 = 전체 배팅금
+        Round.setBasicBet(user.getBetting()); // 레이즈에 성공하면 기본 배팅금 = 전체 배팅금
         user.setState(User.State.RAISE);
         return true;
     }
@@ -85,7 +84,7 @@ public class Bet { // 배팅 방식
     }
 
     public boolean check() throws IOException { // 턴을 넘긴다 배팅x
-        if (user.getCurrentBet() < Round.basicBet) { // 현재 배팅금 < 기본 배팅금 -> 콜
+        if (user.getBetting() < Round.basicBet) { // 현재 배팅금 < 기본 배팅금 -> 콜
             user.sendMessage("You Can't Check!");
             return false;
         }

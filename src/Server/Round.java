@@ -1,6 +1,5 @@
 package Server;
 
-import javax.swing.plaf.TableHeaderUI;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,19 +10,20 @@ public class Round {
     List<Pot> pots = new ArrayList<>();
     CurrentTracker currentTracker;
     static int basicBet;
-    private int baseBet;
+    private final int baseBet;
     boolean noBetting = false;
+    StringBuilder info;
     int userCount;
     int potMoney;
 
-    public Round(List<User> users, int baseBet, CurrentTracker currentTracker) {
+    public Round(List<User> users, int baseBet, CurrentTracker currentTracker) throws IOException {
         this.users = users;
         pots.add(new Pot());
         this.currentTracker = currentTracker;
 
         this.baseBet = baseBet;
         this.userCount = users.size();
-        new Thread(CheckConnect);
+        new Thread(CheckConnect).start();
         potMoney = 0;
     }
 
@@ -33,6 +33,7 @@ public class Round {
         else user = users.get(1);
         user.sendMessage("You are Small Blind!! Basic Betting >> 2");
         user.betMoney(baseBet / 2);
+        potMoney += baseBet/2;
     }
 
     public void bigBlind() throws IOException {
@@ -41,9 +42,12 @@ public class Round {
         else user = users.get(2);
         user.sendMessage("You are Big Blind!! Basic Betting >> 4");
         user.betMoney(baseBet);
+        potMoney+= baseBet;
     }
 
     public void freeFlop() throws IOException { // 개인 카드 2장 분배 후 첫 배팅
+        for(User user: users)
+            sendInfo(user);
         basicBet = baseBet;
         playRound();
     }
@@ -86,7 +90,7 @@ public class Round {
                 if(!checkRemainUser(users))break;
                 currentUser.sendMessage("Your Turn");
                 if (allin) { // 올인 상태 발생
-                    int ownMoney = currentUser.getMoney() + currentUser.getCurrentBet();
+                    int ownMoney = currentUser.getMoney() + currentUser.getBetting();
                     if (ownMoney < allinMoney) { //올인 금액보다 적다면 -> 콜할 능력X -> 폴드 or 올인
                         currentUser.sendMessage("Fold or All-In");
                         currentUser.respondToAllIn(true, 0);
@@ -101,10 +105,8 @@ public class Round {
                     currentUser.sendMessage("Minimum Raise >> " + 2 * (basicBet - currentUser.getCurrentBet()));
                     currentUser.chooseBetAction(basicBet, false);
                 }
-                currentUser.sendMessage("/money"+currentUser.getMoney());
-                currentUser.sendMessage("/bet"+currentUser.getCurrentBet());
-                potMoney+= currentUser.getMoney();
-                currentUser.sendMessage("/pot"+potMoney);
+                potMoney+= currentUser.getCurrentBet();
+                sendInfo(currentUser);
                 switch (currentUser.getState()) {
                     case CALL, CHECK -> turn++;
                     case RAISE -> { // 첫 배팅도 레이즈 상태
@@ -115,8 +117,8 @@ public class Round {
                     case ALLIN -> {
                         turn = 0;
                         userCount--;
-                        if (allinMoney == 0 || allinMoney < currentUser.getCurrentBet()) {
-                            allinMoney = currentUser.getCurrentBet();
+                        if (allinMoney == 0 || allinMoney < currentUser.getBetting()) {
+                            allinMoney = currentUser.getBetting();
                             pots.add(new Pot());
                             allin = true;
                         } else allin = false;
@@ -127,14 +129,20 @@ public class Round {
             currentUser.setCommand(null);
             currentTracker.index = (currentTracker.index + 1) % users.size();
         }
+        for(User user : users) user.setCurrentBet();
+    }
 
+    private void sendInfo(User currentUser) throws IOException {
+        info = new StringBuilder();
+        info.append("/info ").append("/money").append(currentUser.getMoney()).append(" ").append("/bet").append(currentUser.getBetting()).append(" ").append("/pot").append(potMoney);
+        currentUser.sendMessage(info.toString());
     }
 
     public void calculatePot() {
         if (pots.size() == 1) {
             Pot pot = pots.get(0);
             for (User user : users) {
-                pot.plusPot(user.getCurrentBet(), user);
+                pot.plusPot(user.getBetting(), user);
                 if (!(user.getState() == User.State.FOLD)) pot.potUser.add(user);
             }
         } else { // 올인이 발생한 경우에만
@@ -142,8 +150,8 @@ public class Round {
                 int min = minAllin();
                 for (User user : users) {
                     // 올인한 돈보다 크면 현재팟에 min 만큼 저장하고 다음 팟에 저장
-                    if (user.getCurrentBet() == 0) continue; // 돈 없으면 스킵
-                    else pot.plusPot(Math.min(user.getCurrentBet(), min), user); // 올인한 돈보다 작으면 현재팟에
+                    if (user.getBetting() == 0) continue; // 돈 없으면 스킵
+                    else pot.plusPot(Math.min(user.getBetting(), min), user); // 올인한 돈보다 작으면 현재팟에
                     if (!(user.getState() == User.State.FOLD)) pot.potUser.add(user);
                 }
             }
@@ -175,7 +183,7 @@ public class Round {
         int min = 99999;
         for (User user : users) {
             if (user.getState() == User.State.DEPLETED) {
-                int allin = user.getCurrentBet();
+                int allin = user.getBetting();
                 if (allin > 0)
                     if (allin < min) min = allin;
             }
@@ -192,7 +200,7 @@ public class Round {
       while(true){
           for(User user: users)
               if(!user.getSocket().isConnected()) {
-                  user.setCommand("/fold");
+                  user.bet.fold();
                   users.remove(user);
               }
           try {

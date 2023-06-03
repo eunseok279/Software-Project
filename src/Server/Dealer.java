@@ -71,7 +71,6 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                     if (allReady) {
                         try {
                             sendAll("All users are ready. Starting the game...");
-                            sendAll("/game");
                             System.out.println("game is start");
                             for (User user : users) {
                                 user.setReady(false);
@@ -142,7 +141,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     }
 
     // 게임 시작
-    public void gameStart (){
+    public void gameStart() {
         try {
             currentTracker.game = true;
             List<User> gameUsers = new ArrayList<>(users);
@@ -151,10 +150,13 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                 baseBet *= 2;
             }
             for (User user : gameUsers) {
-                user.sendMessage("/money"+user.getMoney());
+                user.sendMessage("/money" + user.getMoney());
                 if (user.getMoney() < baseBet) {
                     user.sendMessage("Your Base Money is not enough");
                     gameUsers.remove(user);
+                }
+                else {
+                    user.sendMessage("/game");
                 }
             }
             if (gameUsers.size() < 2) return;
@@ -169,58 +171,57 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             round.smallBlind();
             round.bigBlind();
             givePersonalCard(gameUsers);
-            sendRank(gameUsers);
             round.freeFlop(); // 빅블라인드 다음 사람부터 시작
-            addCard(3,gameUsers);
-            sendRank(gameUsers);
+            addCard(3, gameUsers);
             round.flop();
-            addCard(1,gameUsers);
-            sendRank(gameUsers);
+            addCard(1, gameUsers);
             round.turn();
-            addCard(1,gameUsers);
-            sendRank(gameUsers);
+            addCard(1, gameUsers);
             round.river();
             gameCount++;
             for (int i = 0; i < round.pots.size(); i++) {
                 Pot pot = round.pots.get(i);
-                determineWinners(pot, i);
+                determineWinners(pot, i, gameUsers);
             }
             deck.initCard();
             currentTracker.game = false;
             sendMoney(gameUsers);
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException e) {
             e.printStackTrace();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
-
-    public void sendRank(List<User> users) throws IOException {
-        for (User user : users)
-            if (!(user.getState() == User.State.FOLD)) user.sendMessage("/rank" + user.hand.determineHandRank().name());
-    }
-
     public void sendMoney(List<User> users) throws IOException {
         for (User user : users)
             user.sendMessage("/money" + user.getMoney());
     }
 
-    public void givePersonalCard(List<User> users) throws IOException, ClassNotFoundException {
+    public void givePersonalCard(List<User> users) throws IOException, InterruptedException {
         for (int i = 0; i < 2; i++)
             for (User user : users) {
                 Card card = deck.drawCard();
                 user.hand.cards.add(card);
-                user.sendMessage("/card" + card.showCard());
             }
+        for(User user: users)
+            user.sendPersonalCard();
     }
 
-    public void addCard(int count,List<User> users) throws IOException {
+    public void addCard(int count, List<User> users) throws IOException, InterruptedException {
+        StringBuilder cards = new StringBuilder();
+        cards.append("/card").append(" ");
         for (int i = 0; i < count; i++) {
             Card card = deck.drawCard();
-
             tableCard.add(card);
             for (User user : users) {
                 user.hand.cards.add(card);
-                user.sendMessage("/card" + card.showCard());
             }
+            cards.append(card.showCard()).append(" ");
+        }
+        String message = cards.toString();
+        for (User user : users) {
+            user.sendMessage(message+"/rank"+user.hand.determineHandRank().name());
+            user.sendACK();
         }
     }
 
@@ -350,7 +351,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         return Integer.compare(h1Kicker, h2Kicker);
     }
 
-    public void determineWinners(Pot pot, int index) throws IOException {
+    public void determineWinners(Pot pot, int index, List<User> users) throws IOException {
         List<User> currentWinners = new ArrayList<>();
         Iterator<User> itr = pot.potUser.iterator();
         User currentUser = itr.next();
@@ -369,10 +370,12 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             }
         }
 
-        for (User user : currentWinners) {
-            user.sendMessage("/win" + index);
-            int money = pot.getPotMoney() / currentWinners.size();
-            user.plusMoney(money);
+        for (User user : users) {
+            if (currentWinners.contains(user)) {
+                user.sendMessage("/win" + index);
+                int money = pot.getPotMoney() / currentWinners.size();
+                user.plusMoney(money);
+            } else user.sendMessage("/lose" + index);
         }
     }
 

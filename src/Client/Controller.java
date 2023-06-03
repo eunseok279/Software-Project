@@ -181,15 +181,28 @@ public class Controller {
     }
 
     public void addCard(String suit, String rank) {
-        if (cardCount < 2) gameGUI.getPersonalPanel().add(new JLabel(new ImageIcon(cardImages.get(suit + rank))));
-        else gameGUI.getCommunityPanel().add(new JLabel(new ImageIcon(cardImages.get(suit + rank))));
+        SwingUtilities.invokeLater(() -> {
+            if (cardCount <2) gameGUI.getPersonalPanel().add(new JLabel(new ImageIcon(cardImages.get(suit + rank))));
+            else gameGUI.getCommunityPanel().add(new JLabel(new ImageIcon(cardImages.get(suit + rank))));
 
-        cardCount++;
-        if (cardCount == 7) cardCount = 0;
+            cardCount++;
+            if (cardCount == 7) cardCount = 0;
+        });
     }
-
     public void winner(String index) {
-        JOptionPane.showMessageDialog(gameGUI.getFrame(), index + "번째 팟을 이겼습니다!!");
+        if(Integer.parseInt(index) == 0)
+            JOptionPane.showMessageDialog(gameGUI.getFrame(), "메인 팟을 이겼습니다!!");
+        else  JOptionPane.showMessageDialog(gameGUI.getFrame(), "사이드 팟 "+index+"을 이겼습니다!!");
+
+        gameGUI.getFrame().dispose();
+        gui.getChatFrame().setVisible(true);
+        gui.setGame(false);
+    }
+    public void loser(String index) {
+        if(Integer.parseInt(index) == 0)
+            JOptionPane.showMessageDialog(gameGUI.getFrame(), "메인 팟에 졌습니다");
+        else  JOptionPane.showMessageDialog(gameGUI.getFrame(), "사이드 팟 "+ index +"에 졌습니다");
+
         gameGUI.getFrame().dispose();
         gui.getChatFrame().setVisible(true);
         gui.setGame(false);

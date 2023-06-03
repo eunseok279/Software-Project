@@ -1,8 +1,12 @@
 package Client;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Client {
@@ -22,7 +26,7 @@ public class Client {
             socket = new Socket(serverAddress, 8080);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream());
-            sendMessage("/name"+name);
+            sendMessage("/name" + name);
 
             MessageReceiver messageReceiver = new MessageReceiver(socket, in, controller);
             Thread messageReceive = new Thread(messageReceiver);
@@ -36,7 +40,7 @@ public class Client {
     }
 
     public void sendMessage(String message) throws IOException {
-        out.write(message+"\n");
+        out.write(message + "\n");
         out.flush();
         executeCommand(message);
     }
@@ -89,7 +93,7 @@ class MessageReceiver implements Runnable {
             socket.close();
         } catch (IOException e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             try {
                 if (in != null) {
                     in.close();
@@ -103,7 +107,7 @@ class MessageReceiver implements Runnable {
         }
     }
 
-    private void command(String message) {
+    private void command(String message) throws IOException {
         if (message.startsWith("/init")) cards.clear();
         else if (message.contains("/name")) {
             String name = message.substring(5);
@@ -120,23 +124,32 @@ class MessageReceiver implements Runnable {
             controller.gui.setReady(true);
         } else if (message.startsWith("/game")) {
             controller.startGame();
-        } else if (message.startsWith("/money")) {
+        } else if(message.startsWith("/info")){
+            List<String> split = new ArrayList<>(Arrays.asList(message.split(" ")));
+            split.remove(0);
+            for(String info: split){
+                controller.appendInfo(info);
+            }
+        } else if (message.startsWith("/rank")) {
             controller.appendInfo(message);
-        } else if (message.startsWith("/bet")) {
-            controller.appendInfo(message);
-        } else if (message.startsWith("/pot")) {
-            controller.appendInfo(message);
-
-        } else if(message.startsWith("/rank")){
-            controller.appendInfo(message);
-        }else if (message.startsWith("/win")) {
+        } else if (message.startsWith("/win")) {
             String index = message.substring(4);
             controller.winner(index);
-        }
-        else if(message.startsWith("/card")){
-            String suit = message.substring(5,6);
-            String rank = message.substring(6);
-            controller.addCard(suit,rank);
+        } else if (message.startsWith("/lose")) {
+            String index = message.substring(5);
+            controller.loser(index);
+        } else if (message.startsWith("/card")) {
+            List<String> split = new ArrayList<>(Arrays.asList(message.split(" ")));
+            split.remove(0);
+            for (String card : split) {
+                if (card.startsWith("/rank")) controller.appendInfo(card);
+                else {
+                    String suit = card.substring(0, 1);
+                    String rank = card.substring(1);
+                    controller.addCard(suit, rank);
+                }
+            }
+            controller.client.sendMessage("//ack");
         }
     }
 }

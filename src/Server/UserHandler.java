@@ -63,6 +63,8 @@ public class UserHandler implements Runnable {
                 System.out.println(user.getName() + " is unready");
             } else if (command.startsWith("//money")) {
                 user.sendMessage(Integer.toString(user.getMoney()));
+            }else if(command.startsWith("//ack")){
+                user.receiveACK();
             }
         } else {
             if (currentTracker.game) {

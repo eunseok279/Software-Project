@@ -14,7 +14,7 @@ public class Pot {
 
     public void plusPot(int money,User user) {
         potMoney += money;
-        user.setCurrentBet(user.getCurrentBet()-money);
+        user.setBetting(user.getBetting()-money);
     }
 
     public int getPotMoney() {
