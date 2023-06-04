@@ -1,17 +1,18 @@
 package Client;
 
 import javax.imageio.ImageIO;
+import javax.swing.Timer;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.List;
+import java.util.*;
 
 public class Controller {
     GUI gui;
@@ -19,8 +20,10 @@ public class Controller {
     Client client;
     Set<String> nameList = new HashSet<>();
     Map<String, Image> cardImages = new HashMap<>();
+    List<JPanel> gameUser = new ArrayList<>();
     int cardCount = 0;
     boolean connectResult = false;
+    boolean send = false;
 
     public Controller(Client client, GUI gui) {
         this.client = client;
@@ -39,9 +42,7 @@ public class Controller {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-
-        this.gui.addButtonListener(gui.getConfirmButton(), e -> {
+        gui.addButtonListener(gui.getConfirmButton(), e -> {
             if (gui.onConfirm()) {
                 String name = gui.getInputName();
                 String ip = gui.getIP();
@@ -51,10 +52,16 @@ public class Controller {
                 } else {
                     gui.checkConnection();
                     gui.setResult(connectResult);
+                    gui.openChatWindow();
+                    setGui();
                 }
             }
         });
-        this.gui.addTextFieldListener(gui.getChatInput(), e -> {
+    }
+
+    public void setGui() {
+
+        gui.addTextFieldListener(gui.getChatInput(), e -> {
             String text = gui.getChatInput().getText().trim();
             try {
                 client.sendMessage(text);
@@ -62,7 +69,7 @@ public class Controller {
                 throw new RuntimeException(ex);
             }
         });
-        this.gui.addButtonListener(gui.getReadyButton(), e -> {
+        gui.addButtonListener(gui.getReadyButton(), e -> {
             try {
                 if (gui.isReady()) client.sendMessage("//unready");
                 else client.sendMessage("//ready");
@@ -70,7 +77,7 @@ public class Controller {
                 throw new RuntimeException(ex);
             }
         });
-        this.gui.addButtonListener(gui.getQuitButton(), e -> {
+        gui.addButtonListener(gui.getQuitButton(), e -> {
             try {
                 client.sendMessage("//quit");
                 gui.getChatFrame().dispose();
@@ -78,7 +85,7 @@ public class Controller {
                 throw new RuntimeException(ex);
             }
         });
-        this.gui.addWindowListener(gui.getChatFrame(), new WindowAdapter() {
+        gui.addWindowListener(gui.getChatFrame(), new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
                 try {
@@ -96,6 +103,8 @@ public class Controller {
         this.gameGUI.getCallButton().addActionListener(e -> {
             try {
                 client.sendMessage("/call");
+                client.sendMessage("//ack");
+                send = true;
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
@@ -103,6 +112,8 @@ public class Controller {
         this.gameGUI.getCheckButton().addActionListener(e -> {
             try {
                 client.sendMessage("/check");
+                client.sendMessage("//ack");
+                send = true;
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
@@ -113,6 +124,8 @@ public class Controller {
             else {
                 try {
                     client.sendMessage("/raise" + money);
+                    client.sendMessage("//ack");
+                    send = true;
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
@@ -122,11 +135,14 @@ public class Controller {
         this.gameGUI.getFoldButton().addActionListener(e -> {
             try {
                 client.sendMessage("/fold");
+                client.sendMessage("//ack");
+                send = true;
+
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
         });
-        this.gui.addWindowListener(gameGUI.getFrame(), new WindowAdapter() {
+        this.gameGUI.addWindowListener(gameGUI.getFrame(), new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
                 try {
@@ -168,10 +184,11 @@ public class Controller {
     public void appendInfo(String message) {
         if (gui.isGame()) {
             if (message.startsWith("/money")) {
+                message = message+"$";
                 gameGUI.getMoneyLabel().setText(message.substring(6));
             } else if (message.startsWith("/bet")) {
-                gameGUI.getBetLabel().setText(message.substring(4));
-            } else if (message.startsWith("/pot")) gameGUI.getPotLabel().setText(message.substring(4));
+                gameGUI.getBetLabel().setText(message.substring(4) + "$");
+            } else if (message.startsWith("/pot")) gameGUI.getPotLabel().setText(message.substring(4) + "$");
             else if (message.startsWith("/rank")) gameGUI.getRankLabel().setText(message.substring(5));
         } else {
             if (message.startsWith("/money")) {
@@ -182,34 +199,34 @@ public class Controller {
 
     public void addCard(String suit, String rank) {
         SwingUtilities.invokeLater(() -> {
-            if (cardCount <2) gameGUI.getPersonalPanel().add(new JLabel(new ImageIcon(cardImages.get(suit + rank))));
+            if (cardCount < 2) gameGUI.getPersonalPanel().add(new JLabel(new ImageIcon(cardImages.get(suit + rank))));
             else gameGUI.getCommunityPanel().add(new JLabel(new ImageIcon(cardImages.get(suit + rank))));
 
             cardCount++;
             if (cardCount == 7) cardCount = 0;
         });
     }
+
     public void winner(String index) {
-        if(Integer.parseInt(index) == 0)
-            JOptionPane.showMessageDialog(gameGUI.getFrame(), "메인 팟을 이겼습니다!!");
-        else  JOptionPane.showMessageDialog(gameGUI.getFrame(), "사이드 팟 "+index+"을 이겼습니다!!");
+        if (Integer.parseInt(index) == 0) JOptionPane.showMessageDialog(gameGUI.getFrame(), "메인 팟을 이겼습니다!!");
+        else JOptionPane.showMessageDialog(gameGUI.getFrame(), "사이드 팟 " + index + "을 이겼습니다!!");
 
         gameGUI.getFrame().dispose();
-        gui.getChatFrame().setVisible(true);
         gui.setGame(false);
+        gui.openChatWindow();
     }
+
     public void loser(String index) {
-        if(Integer.parseInt(index) == 0)
-            JOptionPane.showMessageDialog(gameGUI.getFrame(), "메인 팟에 졌습니다");
-        else  JOptionPane.showMessageDialog(gameGUI.getFrame(), "사이드 팟 "+ index +"에 졌습니다");
+        if (Integer.parseInt(index) == 0) JOptionPane.showMessageDialog(gameGUI.getFrame(), "메인 팟에 졌습니다");
+        else JOptionPane.showMessageDialog(gameGUI.getFrame(), "사이드 팟 " + index + "에 졌습니다");
 
         gameGUI.getFrame().dispose();
-        gui.getChatFrame().setVisible(true);
         gui.setGame(false);
+        gui.openChatWindow();
     }
 
     public void startGame() {
-        gui.getChatFrame().setVisible(false);
+        gui.getChatFrame().dispose();
         gui.setGame(true);
         gameGUI = new GameGUI();
         setGameGUI();
@@ -222,5 +239,60 @@ public class Controller {
         } catch (NumberFormatException e) {
             return false;
         }
+    }
+
+    public void addGameUser(List<String> users) {
+        for (String user : users) {
+            String name = user.substring(5);
+            JPanel panel = new JPanel();
+            panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+            panel.add(new JLabel(name));
+            panel.add(new JLabel("0$"));
+            panel.add(new JLabel("LIVE"));
+            gameUser.add(panel);
+            panel.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLACK));
+            gameGUI.getPlayerPanel().add(panel);
+        }
+    }
+
+    public void setUserTurn(int userIndex)  {
+        for (Component component : gameUser.get(userIndex).getComponents()) {
+            if (component instanceof JLabel label) {
+                label.setFont(new Font("arial", Font.BOLD, 12));
+                label.setForeground(Color.GREEN);
+                break;
+            }
+        }
+    }
+
+    public void setUserTurnEnd(int userIndex, String bet, String state) {
+        int count = 0;
+        for (Component component : gameUser.get(userIndex).getComponents()) {
+            if (component instanceof JLabel label) {
+                if (count == 0) {
+                    label.setFont(new Font("arial", Font.PLAIN, 12));
+                    label.setForeground(Color.BLACK);
+                } else if (count == 1) label.setText(bet+"$");
+                else label.setText(state+"$");
+            }
+            count++;
+        }
+        gameGUI.getResultLabel().setText("다른 사람의 턴입니다...");
+    }
+
+    public void startTime() throws IOException {
+        client.sendMessage("//ack");
+        new Timer(1000, new ActionListener() {
+            int time = 30;  // Start at 30 seconds
+
+            public void actionPerformed(ActionEvent e) {
+                gameGUI.getTimeLabel().setText(Integer.toString(time));
+                time--;
+                if (time < 0 || send) {
+                    ((Timer) e.getSource()).stop();  // Stop the timer
+                }
+            }
+        }).start();
+        send = false;
     }
 }

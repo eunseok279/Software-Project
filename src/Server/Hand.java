@@ -97,7 +97,7 @@ public class Hand {
                 if (consecutiveCards == 5) {
                     return true;
                 }
-            } else if (straightCards.get(i).rank().ordinal() != straightCards.get(i + 1).rank().ordinal()) {
+            } else if (straightCards.get(i).rank().ordinal()+1 != straightCards.get(i + 1).rank().ordinal()) {
                 consecutiveCards = 1;
             }
         }

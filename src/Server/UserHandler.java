@@ -1,6 +1,7 @@
 package Server;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.net.SocketException;
 import java.util.List;
 
@@ -9,6 +10,7 @@ public class UserHandler implements Runnable {
     private final List<User> users;
     BufferedReader in;
     CurrentTracker currentTracker;
+
     public UserHandler(User user, List<User> users, BufferedReader in, CurrentTracker currentTracker) throws IOException {
         this.user = user;
         this.users = users;
@@ -27,18 +29,15 @@ public class UserHandler implements Runnable {
                     handleChat(message);
                 }
             }
-        }
-        catch (SocketException e) {
+        } catch (SocketException e) {
             currentTracker.index--;
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
             try {
-                sendAll("/quit"+user.getName());
-                sendAll(user.getName() + " is exit");
+                sendAll("/quit" + user.getName());
                 in.close();
                 user.getSocket().close();
-                users.remove(user);
                 System.out.println(user.getName() + " is exit");
             } catch (IOException e) {
                 e.printStackTrace();
@@ -49,9 +48,11 @@ public class UserHandler implements Runnable {
     private void handleCommand(String command) throws IOException {
         if (command.startsWith("//")) {
             if (command.startsWith("//quit")) {
-                System.out.println("Connection Lost >> " + user.getName());
-                sendAll("/quit"+user.getName());
-                sendAll(user.getName() + " is exit");
+                System.out.println("연결 종료 >> " + user.getName());
+                sendAll("/quit" + user.getName());
+                sendAll(user.getName() + "님이 나가셨습니다");
+                user.setConnection(false);
+                in.close();
                 user.getSocket().close();
             } else if (command.startsWith("//ready")) {
                 user.setReady(true);
@@ -63,8 +64,8 @@ public class UserHandler implements Runnable {
                 System.out.println(user.getName() + " is unready");
             } else if (command.startsWith("//money")) {
                 user.sendMessage(Integer.toString(user.getMoney()));
-            }else if(command.startsWith("//ack")){
-                user.receiveACK();
+            } else if (command.startsWith("//ack")) {
+                user.setAck(true);
             }
         } else {
             if (currentTracker.game) {
@@ -72,9 +73,13 @@ public class UserHandler implements Runnable {
                 if (user.equals(currentUser)) {
                     do {
                         user.setCommand(command);
+                        user.setAck(true);
                     } while (!user.getResult());
                     user.sendMessage("Turn End");
-                } else user.sendMessage("/error"+currentUser.getName() + "'s turn");
+                } else {
+                    user.sendMessage("/result" + currentUser.getName() + "'s turn");
+                    user.setCommand(null);
+                }
             }
         }
     }

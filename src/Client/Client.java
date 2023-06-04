@@ -108,11 +108,12 @@ class MessageReceiver implements Runnable {
     }
 
     private void command(String message) throws IOException {
-        if (message.startsWith("/init")) cards.clear();
-        else if (message.contains("/name")) {
-            String name = message.substring(5);
-            controller.nameList.add(name);
-        } else if (message.contains("/finish")) {
+        if (message.startsWith("/name")) {
+            List<String> split = new ArrayList<>(Arrays.asList(message.split(" ")));
+            for (String s : split) {
+                if (s.startsWith("/name")) controller.nameList.add(s.substring(5));
+                else controller.appendInfo(s);
+            }
             controller.setUserList();
         } else if (message.contains("/quit")) {
             String name = message.substring(5);
@@ -124,10 +125,10 @@ class MessageReceiver implements Runnable {
             controller.gui.setReady(true);
         } else if (message.startsWith("/game")) {
             controller.startGame();
-        } else if(message.startsWith("/info")){
+        } else if (message.startsWith("/info")) {
             List<String> split = new ArrayList<>(Arrays.asList(message.split(" ")));
             split.remove(0);
-            for(String info: split){
+            for (String info : split) {
                 controller.appendInfo(info);
             }
         } else if (message.startsWith("/rank")) {
@@ -150,6 +151,28 @@ class MessageReceiver implements Runnable {
                 }
             }
             controller.client.sendMessage("//ack");
+        } else if (message.startsWith("/user")) {
+            List<String> split = new ArrayList<>(Arrays.asList(message.split(" ")));
+            controller.addGameUser(split);
+        } else if (message.startsWith("/turn")) {
+            controller.setUserTurn(Integer.parseInt(message.substring(5)));
+        } else if (message.startsWith("/end")) {
+            List<String> split = new ArrayList<>(Arrays.asList(message.split(" ")));
+            int userIndex = 0;
+            String bet = null;
+            String state = null;
+            for (String info : split) {
+                if (info.startsWith("/end")) userIndex = Integer.parseInt(info.substring(4));
+                else if (info.startsWith("/bet")) bet = info.substring(4);
+                else state = info.substring(6);
+            }
+            controller.setUserTurnEnd(userIndex, bet, state);
+        } else if (message.startsWith("/time")) {
+            controller.startTime();
+        }  else if (message.startsWith("/result")) {
+            controller.gameGUI.getResultLabel().setText(message.substring(7));
+        } else if(message.startsWith("/money")){
+            controller.gui.getMoneyLabel().setText(message.substring(6));
         }
     }
 }

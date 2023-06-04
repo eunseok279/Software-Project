@@ -70,7 +70,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                     }
                     if (allReady) {
                         try {
-                            sendAll("All users are ready. Starting the game...");
+                            sendAll("모든 플레이어가 준비가 완료되었습니다...");
                             System.out.println("game is start");
                             for (User user : users) {
                                 user.setReady(false);
@@ -89,6 +89,27 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             }
         };
         executorService.submit(readyChecker);
+
+        Runnable checkConnect = ()->{
+            while(true) {
+                for(User user :users) {
+                    if(!user.isConnection()){
+                        users.remove(user);
+                        try {
+                            sendAll("/quit"+user.getName());
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
+        executorService.submit(checkConnect);
     }
 
     public void createUser(Socket clientSocket) {
@@ -108,7 +129,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                 synchronized (users) {
                     for (User u : users) {
                         if (u.getName().equals(name)) {
-                            out.println("You need to log in with a different nickname");
+                            out.println("중복 접속입니다.");
                             in.close();
                             out.close();
                             clientSocket.close();
@@ -126,15 +147,16 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             }
             users.add(user);
             System.out.println(user.getName() + " is joined!");
-            sendAll(user.getName() + " is joined");
+            sendAll(user.getName() + "님이 들어왔습니다.");
             UserHandler handler = new UserHandler(user, users, in, currentTracker);
             executorService.submit(handler);
-            sendMsg("Welcome!!", user);
+            sendMsg("환영합니다!!", user);
+            StringBuilder names = new StringBuilder();
             for (User u : users) {
-                sendAll("/name" + u.getName());
+                names.append("/name").append(u.getName()).append(" ");
+                names.append("/money").append(u.getMoney()).append(" ");
             }
-            sendAll("/finish");
-            user.sendMessage("/money" + user.getMoney());
+            sendAll(names.toString());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -152,10 +174,9 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             for (User user : gameUsers) {
                 user.sendMessage("/money" + user.getMoney());
                 if (user.getMoney() < baseBet) {
-                    user.sendMessage("Your Base Money is not enough");
+                    user.sendMessage("기본 배팅금이 부족합니다.");
                     gameUsers.remove(user);
-                }
-                else {
+                } else {
                     user.sendMessage("/game");
                 }
             }
@@ -166,6 +187,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             } else rearrangeOrder(gameUsers, 1);
 
             if (gameUsers.size() == 2) currentTracker.index = 0;
+            else if (gameUsers.size() == 3) currentTracker.index = 0;
             else currentTracker.index = 3;
             Round round = new Round(gameUsers, baseBet, currentTracker);
             round.smallBlind();
@@ -179,10 +201,11 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             addCard(1, gameUsers);
             round.river();
             gameCount++;
-            for (int i = 0; i < round.pots.size(); i++) {
-                Pot pot = round.pots.get(i);
-                determineWinners(pot, i, gameUsers);
-            }
+            if (!(gameUsers.size() == 0))
+                for (int i = 0; i < round.pots.size(); i++) {
+                    Pot pot = round.pots.get(i);
+                    determineWinners(pot, i, gameUsers);
+                }
             deck.initCard();
             currentTracker.game = false;
             sendMoney(gameUsers);
@@ -192,9 +215,13 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             throw new RuntimeException(e);
         }
     }
+
     public void sendMoney(List<User> users) throws IOException {
-        for (User user : users)
+        for (User user : users) {
             user.sendMessage("/money" + user.getMoney());
+            user.setState(User.State.LIVE);
+            user.hand.cards.clear();
+        }
     }
 
     public void givePersonalCard(List<User> users) throws IOException, InterruptedException {
@@ -203,8 +230,10 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                 Card card = deck.drawCard();
                 user.hand.cards.add(card);
             }
-        for(User user: users)
+        for (User user : users) {
             user.sendPersonalCard();
+            Thread.sleep(500);
+        }
     }
 
     public void addCard(int count, List<User> users) throws IOException, InterruptedException {
@@ -220,8 +249,8 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         }
         String message = cards.toString();
         for (User user : users) {
-            user.sendMessage(message+"/rank"+user.hand.determineHandRank().name());
-            user.sendACK();
+            user.sendMessage(message + "/rank" + user.hand.determineHandRank().name());
+            Thread.sleep(500);
         }
     }
 
@@ -385,7 +414,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         Map<Integer, Card> cardMap = new HashMap<>();
         for (int i = 0; i < users.size(); i++) {
             cardMap.put(i, deck.drawCard());
-            sendAll(users.get(i).getName() + "'s card >> " + cardMap.get(i).showCard());
+            sendAll(users.get(i).getName() + "님 카드 >> " + cardMap.get(i).showCard());
         }
         List<Map.Entry<Integer, Card>> entry = new ArrayList<>(cardMap.entrySet());
         entry.sort((o1, o2) -> {
@@ -393,8 +422,11 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             if (rankComp == 0) return o2.getValue().suit().compareTo(o1.getValue().suit());
             return rankComp;
         });
-        sendAll(users.get(entry.get(0).getKey()).getName() + " >> DealerButton!!");
         rearrangeOrder(users, entry.get(0).getKey());
+        StringBuilder names = new StringBuilder();
+        for (User user : users)
+            names.append("/user").append(user.getName()).append(" ");
+        sendAll(names.toString());
         initUserCard();
         deck.initCard();
         deck.shuffle();

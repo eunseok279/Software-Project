@@ -3,11 +3,12 @@ package Client;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
 import java.awt.event.WindowListener;
 
 public class GUI {
     private final JFrame frame = new JFrame("Connect");
-    private final JFrame chatFrame = new JFrame("User");
+    private JFrame chatFrame;
     private final JTextField nicknameField;
     private final JTextField serverIPField;
     private static final long serialVersionUID = 1L;
@@ -25,6 +26,7 @@ public class GUI {
     private boolean result = false;
     private boolean ready = false;
     private boolean game = false;
+    private String nickname;
 
     public GUI() {
         // 프레임이 닫힐 때 프로그램도 종료하도록 설정
@@ -55,7 +57,7 @@ public class GUI {
 
     // 확인 버튼 클릭 시 실행되는 메소드
     public boolean onConfirm() {
-        String nickname = nicknameField.getText();
+        nickname = nicknameField.getText();
         String serverIP = serverIPField.getText();
 
         // 닉네임과 서버 IP 확인
@@ -76,9 +78,7 @@ public class GUI {
                     Thread.currentThread().interrupt();
                 }
             }
-            JOptionPane.showMessageDialog(frame, "Connecting!!");
             frame.dispose();
-            openChatWindow();
         };
         new Thread(checkConnect).start();
     }
@@ -88,7 +88,8 @@ public class GUI {
     }
 
     // 채팅 창을 연다
-    private void openChatWindow() {
+    public void openChatWindow() {
+        chatFrame = new JFrame();
         JPanel textAndButtonPanel = new JPanel(new FlowLayout());
 
 // Add components to the textAndButtonPanel
@@ -98,7 +99,7 @@ public class GUI {
         textAndButtonPanel.add(readyButton);
         textAndButtonPanel.add(quitButton);
 
-        chatFrame.setTitle("User");
+        chatFrame.setTitle(nickname);
         chatFrame.setVisible(true);
         chatFrame.setSize(1000, 600);
         chatFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -204,10 +205,13 @@ class GameGUI {
     private final JLabel betLabel;
     private final JLabel potLabel;
     private final JLabel moneyLabel;
+    private final JLabel timeLabel;
     private final JTextArea miniChatArea;
     private final JTextField miniChatField;
     private final JTextField betField;
-    String[] hands = {"Royal Straight Flush", "Straight Flush", "Four of a kind", "Full house", "Flush", "Straight", "Three of a kind", "Two pair", "One pair", "High card"};
+    private final JPanel playerPanel;
+    private final JLabel resultLabel;
+    String[] hands = {"로얄 스트레이트 플러쉬", "스트레이트 플러쉬", "포카드(Four of a kind)", "풀하우스", "플러쉬", "스트레이트", "트리플(Three of a kind)", "투 페어", "원 페어", "하이 카드"};
 
     String[] handDescriptions = {"이미 승리하셨습니다!!!", "같은 무늬 5장, 연결된 숫자", "같은 숫자 4개", "같은 숫자 3개와 같은 숫자 2개의 조함", "같은 무늬 5장", "5장의 카드가 연속된 경우", "3장의 카드가 같은 숫자", "2가지 숫자가 페어", "2장의 카드가 같은 숫자", "5장의 카드가 숫자, 무늬 모두 다른 경우 => 가장 높은 카드로 승자 판별"};
 
@@ -226,6 +230,14 @@ class GameGUI {
 
     public JTextField getBetField() {
         return betField;
+    }
+
+    public JPanel getPlayerPanel() {
+        return playerPanel;
+    }
+
+    public JLabel getResultLabel() {
+        return resultLabel;
     }
 
     public GameGUI() {
@@ -264,36 +276,48 @@ class GameGUI {
         moneyPanel.add(label4);
         moneyPanel.add(moneyLabel);
 
+        JPanel timePanel = new JPanel(new FlowLayout());
+        JLabel label5 = new JLabel("남은 시간:");
+        timeLabel = new JLabel();
+        timePanel.add(label5);
+        timePanel.add(timeLabel);
+
         topPanel.add(betPanel);
         topPanel.add(potPanel);
         topPanel.add(moneyPanel);
         topPanel.add(rankPanel);
+        topPanel.add(timePanel);
         mainPanel.add(topPanel, BorderLayout.NORTH);
 
         // Center
         JPanel centerPanel = new JPanel(new GridLayout(3, 1));
+        playerPanel = new JPanel(new FlowLayout());
         communityPanel = new JPanel(new FlowLayout());
         personalPanel = new JPanel(new FlowLayout());
-        centerPanel.add(new JPanel());
+        centerPanel.add(playerPanel);
         centerPanel.add(communityPanel);
         centerPanel.add(personalPanel);
         mainPanel.add(centerPanel, BorderLayout.CENTER);
 
         // Bottom
-        JPanel bottomPanel = new JPanel();
-        JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JPanel southPanel = new JPanel(new GridLayout(2,1));
+        JPanel inputPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JPanel resultPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        resultLabel = new JLabel();
         betField = new JTextField(10);
         foldButton = new JButton("Fold");
         checkButton = new JButton("Check");
         callButton = new JButton("Call");
         raiseButton = new JButton("Bet/Raise");
 
-        southPanel.add(foldButton);
-        southPanel.add(checkButton);
-        southPanel.add(callButton);
-        southPanel.add(raiseButton);
-        southPanel.add(betField);
-        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+        inputPanel.add(foldButton);
+        inputPanel.add(checkButton);
+        inputPanel.add(callButton);
+        inputPanel.add(raiseButton);
+        inputPanel.add(betField);
+        resultPanel.add(resultLabel);
+        southPanel.add(resultPanel);
+        southPanel.add(inputPanel);
         mainPanel.add(southPanel, BorderLayout.SOUTH);
 
         // Right Panel
@@ -320,8 +344,8 @@ class GameGUI {
         sidePanel.add(handRankingPanel, BorderLayout.NORTH);
         JPanel chatPanel = new JPanel(new BorderLayout()); // Here set layout to BorderLayout
         chatPanel.add(new JLabel("                          미니 채팅창"), BorderLayout.NORTH);
-        miniChatArea = new JTextArea(10, 20);
-        miniChatField = new JTextField(20);
+        miniChatArea = new JTextArea(10, 30);
+        miniChatField = new JTextField(30);
         miniChatArea.setEditable(false);
         JScrollPane scrollPane = new JScrollPane(miniChatArea);
         chatPanel.add(scrollPane, BorderLayout.CENTER); // Here change to CENTER
@@ -376,6 +400,10 @@ class GameGUI {
         return moneyLabel;
     }
 
+    public JLabel getTimeLabel() {
+        return timeLabel;
+    }
+
     public JTextArea getMiniChatArea() {
         return miniChatArea;
     }
@@ -384,4 +412,7 @@ class GameGUI {
         return miniChatField;
     }
 
+    public void addWindowListener(JFrame frame, WindowAdapter listener) {
+        frame.addWindowListener(listener);
+    }
 }
