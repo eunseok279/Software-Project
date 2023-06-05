@@ -18,7 +18,7 @@ public class User {
     Bet bet;
     private final String name;
     private int money;
-    private int betting;
+    private int alreadyBet;
     private int currentBet;
     private boolean connection;
     private State state = State.LIVE;
@@ -35,7 +35,7 @@ public class User {
     public User(Socket socket, String name, PrintWriter out, int money) throws IOException {
         this(socket, name, out);
         this.money = money;
-        this.betting = 0;
+        this.alreadyBet = 0;
         this.connection = true;
         bet = new Bet(this);
         hand = new Hand();
@@ -46,7 +46,7 @@ public class User {
         this.name = name;
         this.out = out;
         this.money = 200;
-        this.betting = 0;
+        this.alreadyBet = 0;
         this.connection = true;
         bet = new Bet(this);
         hand = new Hand();
@@ -67,14 +67,13 @@ public class User {
     public int getCurrentBet() {
         return currentBet;
     }
-
-    public void setCurrentBet() {
-        betting += currentBet;
-        this.currentBet = 0;
+    public void setCurrentBet(int money) {
+        currentBet = money;
     }
 
     public void betMoney(int money) {
         this.currentBet += money;
+        this.alreadyBet +=money;
         this.money -= money;
     }
 
@@ -105,8 +104,9 @@ public class User {
         out.flush();
     }
 
-    public void sendPersonalCard() throws IOException, InterruptedException {
-        String message = "/card" + " " + hand.cards.get(0).showCard() + " " + hand.cards.get(1).showCard() + " " + "/rank" + hand.determineHandRank().name();
+    public void sendPersonalCard() throws IOException {
+        hand.handRank = hand.determineHandRank();
+        String message = "/card" + " " + hand.cards.get(0).showCard() + " " + hand.cards.get(1).showCard() + " " + "/rank" + hand.handRank.name();
         sendMessage(message);
     }
 
@@ -122,8 +122,22 @@ public class User {
         scheduledFuture = executorService.schedule(foldTask, 30, TimeUnit.SECONDS);
         while (!ack) {
             Thread.sleep(100);
+            if(command!=null) break;
         }
         ack = false;
+    }
+    void receiveACK() throws InterruptedException {
+        ack = false;
+        Runnable foldTask = () -> {
+            ack = true;
+            connection = false;
+        };
+        scheduledFuture = executorService.schedule(foldTask, 5, TimeUnit.SECONDS);
+        while (!ack) {
+            Thread.sleep(100);
+        }
+        ack = false;
+        scheduledFuture.cancel(false);
     }
 
     public void setConnection(boolean connection) {
@@ -134,7 +148,7 @@ public class User {
         return connection;
     }
 
-    public void chooseBetAction(int basicBet, boolean noBet) throws IOException, InterruptedException { // basicBet = 앞 사람의 배팅금// currentBet = 현재 내놓은 배팅금
+    public void chooseBetAction(int minimumBet, int basicBet, boolean noBet) throws IOException, InterruptedException { // basicBet = 앞 사람의 배팅금// currentBet = 현재 내놓은 배팅금
         result = false;
         commandACK();
         while (true) {
@@ -144,40 +158,47 @@ public class User {
                     if (noBet) { // 아무도 배팅을 안한 상태
                         if (command.startsWith("/raise")) { // 배팅
                             int betMoney = Integer.parseInt(command.substring(6));
-                            result = bet.bet(betMoney);
+                            result = this.bet.bet(betMoney,minimumBet);
                             if (result) break;
                         } else if (command.startsWith("/fold")) { // 폴드
-                            result = bet.fold();
+                            this.bet.fold();
                             break;
                         } else if (command.startsWith("/check")) { // 체크
-                            result = bet.check();
+                            result = this.bet.check(basicBet);
+                            if(result)break;
+                        } else if(command.startsWith("/allin")){
+                            this.bet.allIn();
                             break;
-                        } else {
-                            sendMessage("/result잘못된 선택입니다.");
+                        }else {
+                            sendMessage("/error잘못된 선택입니다.");
                         }
                     } else {    // 누가 배팅한 상태 -> 콜하거나 레이즈 혹은 폴드
                         if (command.startsWith("/call")) { // 콜
-                            result = bet.call(basicBet - currentBet); // 기본 배팅 - 나의 배팅금
+                            result = this.bet.call(minimumBet); // 기본 배팅 - 나의 배팅금
                             if (result) break;
                         } else if (command.startsWith("/raise")) { // 레이즈
                             int raiseMoney = Integer.parseInt(command.substring(6));
-                            result = bet.raise(raiseMoney, currentBet, basicBet);
+                            result = this.bet.raise(raiseMoney, minimumBet);
                             if (result) break;
                         } else if (command.startsWith("/fold")) { // 폴드
-                            result = bet.fold();
+                            result = this.bet.fold();
                             break;
                         } else if (command.startsWith("/check")) { // 체크 (빅블라인드만 예외적으로 사용가능)
-                            result = bet.check();
+                            result = this.bet.check(basicBet);
                             if (result) break;
+                        }else if(command.startsWith("/allin")){
+                            this.bet.allIn();
+                            break;
                         } else {
-                            sendMessage("/result잘못된 선택입니다.");
+                            sendMessage("/error잘못된 선택입니다.");
                         }
                     }
+                    command = null;
                 }
-                command = null;
             }
         }
         scheduledFuture.cancel(false);
+        sendMessage("/send");
     }
 
     public void respondToAllIn(boolean allin, int basicBet) throws IOException, InterruptedException {
@@ -193,49 +214,49 @@ public class User {
                 synchronized (command) {
                     if (allin) {
                         if (command.startsWith("/allin")) {
-                            result = bet.allIn();
+                            bet.allIn();
                             break;
                         } else if (command.startsWith("/fold")) {
-                            result = bet.fold();
+                            bet.fold();
                             break;
                         } else {
-                            sendMessage("/result잘못된 선택입니다.");
+                            sendMessage("/error잘못된 선택입니다.");
                         }
                     } else {
                         if (command.startsWith("/call")) {
-                            result = bet.call(basicBet - betting); // 기본 배팅 - 나의 배팅금
+                            result = bet.call(basicBet - alreadyBet); // 기본 배팅 - 나의 배팅금
                             if (result) break;
                         } else if (command.startsWith("/fold")) {
-                            result = bet.fold();
+                            bet.fold();
                             break;
                         } else if (command.startsWith("/raise")) {
                             int raiseMoney = Integer.parseInt(command.substring(6));
-                            result = bet.raise(raiseMoney, betting, basicBet);
+                            result = bet.raise(raiseMoney, basicBet);
                             if (result) break;
+                        } else if(command.startsWith("/allin")){
+                            bet.allIn();
+                            break;
                         }else {
-                            sendMessage("/result잘못된 선택입니다.");
+                            sendMessage("/error잘못된 선택입니다.");
                         }
                     }
+                    command = null;
                 }
-                command = null;
             }
         }
+        scheduledFuture.cancel(false);
     }
 
     public void setCommand(String command) {
         this.command = command;
     }
 
-    public boolean getResult() {
-        return result;
+    public void setAlreadyBet(int amt) {
+        alreadyBet = amt;
     }
 
-    public void setBetting(int amt) {
-        betting = amt;
-    }
-
-    public int getBetting() {
-        return betting;
+    public int getAlreadyBet() {
+        return alreadyBet;
     }
 }
 

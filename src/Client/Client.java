@@ -71,8 +71,6 @@ class MessageReceiver implements Runnable {
     private final Socket socket;
     Controller controller;
     BufferedReader in;
-    List<Card> cards = new ArrayList<>();
-
     public MessageReceiver(Socket socket, BufferedReader in, Controller controller) {
         this.socket = socket;
         this.in = in;
@@ -93,6 +91,8 @@ class MessageReceiver implements Runnable {
             socket.close();
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         } finally {
             try {
                 if (in != null) {
@@ -107,12 +107,12 @@ class MessageReceiver implements Runnable {
         }
     }
 
-    private void command(String message) throws IOException {
+    private void command(String message) throws IOException, InterruptedException {
         if (message.startsWith("/name")) {
             List<String> split = new ArrayList<>(Arrays.asList(message.split(" ")));
-            for (String s : split) {
-                if (s.startsWith("/name")) controller.nameList.add(s.substring(5));
-                else controller.appendInfo(s);
+            controller.nameList.clear();
+            for (String name : split) {
+                controller.nameList.add(name.substring(5));
             }
             controller.setUserList();
         } else if (message.contains("/quit")) {
@@ -161,18 +161,32 @@ class MessageReceiver implements Runnable {
             int userIndex = 0;
             String bet = null;
             String state = null;
+            String pot = null;
             for (String info : split) {
                 if (info.startsWith("/end")) userIndex = Integer.parseInt(info.substring(4));
                 else if (info.startsWith("/bet")) bet = info.substring(4);
-                else state = info.substring(6);
+                else if(info.startsWith("/state")) state = info.substring(6);
+                else pot = info.substring(4);
             }
-            controller.setUserTurnEnd(userIndex, bet, state);
+            controller.setUserTurnEnd(userIndex, bet, state,pot);
         } else if (message.startsWith("/time")) {
             controller.startTime();
-        }  else if (message.startsWith("/result")) {
+        } else if (message.startsWith("/result")) {
             controller.gameGUI.getResultLabel().setText(message.substring(7));
-        } else if(message.startsWith("/money")){
-            controller.gui.getMoneyLabel().setText(message.substring(6));
+        } else if (message.startsWith("/money")) {
+            controller.appendInfo(message);
+        } else if (message.startsWith("/error")) {
+            controller.errorOccur(message);
+        } else if (message.startsWith("/send")) {
+            controller.send = true;
+        } else if (message.startsWith("/state")) {
+            List<String> split = new ArrayList<>(Arrays.asList(message.split(" ")));
+            List<String> state = new ArrayList<>();
+            for (String info : split) {
+                if (info.substring(6).equals("DEPLETED")) state.add("ALLIN");
+                else state.add(info.substring(6));
+            }
+            controller.setState(state);
         }
     }
 }

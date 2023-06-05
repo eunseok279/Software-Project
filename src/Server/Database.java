@@ -16,14 +16,14 @@ public class Database {
             stmt = con.createStatement();
             System.out.println("MySQL Server Open!!");
         } catch (Exception e) {
-            System.out.println("MySQL Server is Down > " + e.toString());
+            System.out.println("MySQL Server is Down > " + e);
         }
     }
 
     //삽입
-    void insertUser(String userName,int money) {
+    void insertUser(String userName) {
         try {
-            String insertStr = "INSERT INTO users (name, money) VALUES('" + userName + "','"+money+"')";
+            String insertStr = "INSERT INTO users (name, money) VALUES('" + userName + "','" + 200 + "')";
             stmt.executeUpdate(insertStr);
         } catch (Exception e) {
             e.printStackTrace();
@@ -47,13 +47,13 @@ public class Database {
         return flag;
     }
 
-    int getUserMoney(String userName){
+    int getUserMoney(String userName) {
         int money = 0;
         try {
             String checkMoney = "SELECT money FROM users WHERE name= '" + userName + "'";
             ResultSet result = stmt.executeQuery(checkMoney);
-            if(result.next()){
-              money = result.getInt("money");
+            if (result.next()) {
+                money = result.getInt("money");
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -63,13 +63,19 @@ public class Database {
 
 
     //삭제
-    void removeData() {
-        try {
-            String removeStr = "DELETE FROM students where name='이지수'";
-            stmt.executeUpdate(removeStr);
-            System.out.println("데이터 삭제 성공!");
-        } catch (Exception e) {
-            System.out.println("데이터 삭제 실패 이유 : " + e.toString());
+    public void updateUserBalance(String userName, int money) throws SQLException {
+        String sqlUpdate = "UPDATE users SET money = ? WHERE name = ?";
+
+        PreparedStatement pstmt = con.prepareStatement(sqlUpdate);
+
+        pstmt.setInt(1, money);
+        pstmt.setString(2, userName);
+
+        int rowAffected = pstmt.executeUpdate();
+        if (rowAffected == 1) {
+            System.out.println(userName+">> Successfully updated the balance.");
+        } else {
+            System.out.println("Failed to update the balance or user not found.");
         }
     }
 }

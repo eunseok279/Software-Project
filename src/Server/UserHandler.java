@@ -53,14 +53,15 @@ public class UserHandler implements Runnable {
                 sendAll(user.getName() + "님이 나가셨습니다");
                 user.setConnection(false);
                 in.close();
+                user.out.close();
                 user.getSocket().close();
             } else if (command.startsWith("//ready")) {
                 user.setReady(true);
-                sendAll(user.getName() + " is ready");
+                sendAll(user.getName() + " 레디");
                 System.out.println(user.getName() + " is ready");
             } else if (command.startsWith("//unready")) {
                 user.setReady(false);
-                sendAll(user.getName() + " is unready");
+                sendAll(user.getName() + " 언레디");
                 System.out.println(user.getName() + " is unready");
             } else if (command.startsWith("//money")) {
                 user.sendMessage(Integer.toString(user.getMoney()));
@@ -71,13 +72,10 @@ public class UserHandler implements Runnable {
             if (currentTracker.game) {
                 User currentUser = users.get(currentTracker.index);
                 if (user.equals(currentUser)) {
-                    do {
-                        user.setCommand(command);
-                        user.setAck(true);
-                    } while (!user.getResult());
-                    user.sendMessage("Turn End");
+                    user.setCommand(command);
+                    user.setAck(true);
                 } else {
-                    user.sendMessage("/result" + currentUser.getName() + "'s turn");
+                    user.sendMessage("/error" + currentUser.getName() + "님의 차례입니다");
                     user.setCommand(null);
                 }
             }

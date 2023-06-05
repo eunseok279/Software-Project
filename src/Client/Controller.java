@@ -13,12 +13,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Controller {
     GUI gui;
     GameGUI gameGUI;
     Client client;
-    Set<String> nameList = new HashSet<>();
+    List<String> nameList = new ArrayList<>();
     Map<String, Image> cardImages = new HashMap<>();
     List<JPanel> gameUser = new ArrayList<>();
     int cardCount = 0;
@@ -90,7 +91,6 @@ public class Controller {
             public void windowClosing(WindowEvent e) {
                 try {
                     client.sendMessage("//quit");
-                    client.socket.close();
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
@@ -103,8 +103,6 @@ public class Controller {
         this.gameGUI.getCallButton().addActionListener(e -> {
             try {
                 client.sendMessage("/call");
-                client.sendMessage("//ack");
-                send = true;
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
@@ -112,8 +110,6 @@ public class Controller {
         this.gameGUI.getCheckButton().addActionListener(e -> {
             try {
                 client.sendMessage("/check");
-                client.sendMessage("//ack");
-                send = true;
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
@@ -124,8 +120,6 @@ public class Controller {
             else {
                 try {
                     client.sendMessage("/raise" + money);
-                    client.sendMessage("//ack");
-                    send = true;
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
@@ -135,9 +129,13 @@ public class Controller {
         this.gameGUI.getFoldButton().addActionListener(e -> {
             try {
                 client.sendMessage("/fold");
-                client.sendMessage("//ack");
-                send = true;
-
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        });
+        this.gameGUI.getAllInButton().addActionListener(e -> {
+            try {
+                client.sendMessage("/allin");
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
@@ -181,10 +179,10 @@ public class Controller {
         }
     }
 
-    public void appendInfo(String message) {
+    public void appendInfo(String message) throws IOException {
         if (gui.isGame()) {
             if (message.startsWith("/money")) {
-                message = message+"$";
+                message = message + "$";
                 gameGUI.getMoneyLabel().setText(message.substring(6));
             } else if (message.startsWith("/bet")) {
                 gameGUI.getBetLabel().setText(message.substring(4) + "$");
@@ -192,12 +190,14 @@ public class Controller {
             else if (message.startsWith("/rank")) gameGUI.getRankLabel().setText(message.substring(5));
         } else {
             if (message.startsWith("/money")) {
+                message = message + "$";
                 gui.getMoneyLabel().setText(message.substring(6));
             }
         }
+        client.sendMessage("//ack");
     }
 
-    public void addCard(String suit, String rank) {
+    public void addCard(String suit, String rank) throws IOException {
         SwingUtilities.invokeLater(() -> {
             if (cardCount < 2) gameGUI.getPersonalPanel().add(new JLabel(new ImageIcon(cardImages.get(suit + rank))));
             else gameGUI.getCommunityPanel().add(new JLabel(new ImageIcon(cardImages.get(suit + rank))));
@@ -205,24 +205,29 @@ public class Controller {
             cardCount++;
             if (cardCount == 7) cardCount = 0;
         });
+        client.sendMessage("//ack");
     }
 
     public void winner(String index) {
-        if (Integer.parseInt(index) == 0) JOptionPane.showMessageDialog(gameGUI.getFrame(), "메인 팟을 이겼습니다!!");
+        if (Integer.parseInt(index) == 0) {
+            gameGUI.getFrame().dispose();
+            gui.setGame(false);
+            gui.openChatWindow();
+            JOptionPane.showMessageDialog(gameGUI.getFrame(), "메인 팟을 이겼습니다!!");
+        }
         else JOptionPane.showMessageDialog(gameGUI.getFrame(), "사이드 팟 " + index + "을 이겼습니다!!");
-
-        gameGUI.getFrame().dispose();
-        gui.setGame(false);
-        gui.openChatWindow();
+        gameUser.clear();
     }
 
     public void loser(String index) {
-        if (Integer.parseInt(index) == 0) JOptionPane.showMessageDialog(gameGUI.getFrame(), "메인 팟에 졌습니다");
+        if (Integer.parseInt(index) == 0) {
+            gameGUI.getFrame().dispose();
+            gui.setGame(false);
+            gui.openChatWindow();
+            JOptionPane.showMessageDialog(gameGUI.getFrame(), "메인 팟에 졌습니다");
+        }
         else JOptionPane.showMessageDialog(gameGUI.getFrame(), "사이드 팟 " + index + "에 졌습니다");
-
-        gameGUI.getFrame().dispose();
-        gui.setGame(false);
-        gui.openChatWindow();
+        gameUser.clear();
     }
 
     public void startGame() {
@@ -246,16 +251,19 @@ public class Controller {
             String name = user.substring(5);
             JPanel panel = new JPanel();
             panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-            panel.add(new JLabel(name));
-            panel.add(new JLabel("0$"));
-            panel.add(new JLabel("LIVE"));
+            JLabel nameLabel = new JLabel(name);
+            JLabel betLabel = new JLabel("0$");
+            JLabel stateLabel = new JLabel("LIVE");
+            panel.add(nameLabel);
+            panel.add(betLabel);
+            panel.add(stateLabel);
             gameUser.add(panel);
             panel.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.BLACK));
             gameGUI.getPlayerPanel().add(panel);
         }
     }
 
-    public void setUserTurn(int userIndex)  {
+    public void setUserTurn(int userIndex) {
         for (Component component : gameUser.get(userIndex).getComponents()) {
             if (component instanceof JLabel label) {
                 label.setFont(new Font("arial", Font.BOLD, 12));
@@ -265,34 +273,70 @@ public class Controller {
         }
     }
 
-    public void setUserTurnEnd(int userIndex, String bet, String state) {
+    public void setUserTurnEnd(int userIndex, String bet, String state, String pot) {
         int count = 0;
         for (Component component : gameUser.get(userIndex).getComponents()) {
             if (component instanceof JLabel label) {
                 if (count == 0) {
                     label.setFont(new Font("arial", Font.PLAIN, 12));
                     label.setForeground(Color.BLACK);
-                } else if (count == 1) label.setText(bet+"$");
-                else label.setText(state+"$");
+                } else if (count == 1) label.setText(bet + "$");
+                else {
+                    if(state.equals("DEPLETED")) state = "ALLIN";
+                    label.setText(state);
+                }
             }
             count++;
         }
+        gameGUI.getPotLabel().setText(pot);
         gameGUI.getResultLabel().setText("다른 사람의 턴입니다...");
+    }
+    public void setState(List<String> state){
+        for(int i = 0;i<gameUser.size();i++){
+            int count =0;
+            for(Component component: gameUser.get(i).getComponents()){
+                if(component instanceof  JLabel label){
+                    if(count == 2){
+                        label.setText(state.get(i));
+                    }
+                }
+                count++;
+            }
+        }
     }
 
     public void startTime() throws IOException {
         client.sendMessage("//ack");
-        new Timer(1000, new ActionListener() {
-            int time = 30;  // Start at 30 seconds
+        AtomicInteger time = new AtomicInteger(30);
 
+        Timer timer = new Timer(1000, e -> {
+            int remainingTime = time.decrementAndGet();
+            gameGUI.getTimeLabel().setText(Integer.toString(remainingTime));
+            if (remainingTime < 0 || send) {
+                ((Timer) e.getSource()).stop();
+            }
+        });
+        timer.start();
+        send = false;
+    }
+
+    public void errorOccur(String message) {
+        String result = gameGUI.getResultLabel().getText();
+        gameGUI.getResultLabel().setText(message.substring(6));
+        gameGUI.getResultLabel().setForeground(Color.RED);
+        Timer error = new Timer(1000, new ActionListener() {
+            int time = 1;
+
+            @Override
             public void actionPerformed(ActionEvent e) {
-                gameGUI.getTimeLabel().setText(Integer.toString(time));
                 time--;
-                if (time < 0 || send) {
+                if (time < 0) {
                     ((Timer) e.getSource()).stop();  // Stop the timer
+                    gameGUI.getResultLabel().setText(result);
+                    gameGUI.getResultLabel().setForeground(Color.BLACK);
                 }
             }
-        }).start();
-        send = false;
+        });
+        error.start();
     }
 }

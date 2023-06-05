@@ -9,8 +9,10 @@ import java.net.Socket;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 class CurrentTracker {
     int index = 0;
@@ -26,10 +28,10 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     int gameCount = 1;
     int baseBet = 4;
     boolean dealerButton = false;
-    private Socket clientSocket;
     Database db = new Database();
+    private Socket clientSocket;
 
-    public void setUpGame(int port) throws ClassNotFoundException, SQLException, IOException {
+    public void setUpGame(int port) throws ClassNotFoundException, SQLException {
         Class.forName("com.mysql.cj.jdbc.Driver");
         db.con = DriverManager.getConnection(db.url, db.user, db.passwd);
         db.stmt = db.con.createStatement();
@@ -46,9 +48,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                         }
                     }
                     clientSocket = serverSocket.accept();
-                    executorService.submit(() -> {
-                        createUser(clientSocket);
-                    });
+                    executorService.submit(() -> createUser(clientSocket));
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -90,22 +90,27 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         };
         executorService.submit(readyChecker);
 
-        Runnable checkConnect = ()->{
-            while(true) {
-                for(User user :users) {
-                    if(!user.isConnection()){
-                        users.remove(user);
-                        try {
-                            sendAll("/quit"+user.getName());
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
+        Runnable checkConnect = () -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                synchronized (users) {
+                    for (Iterator<User> iterator = users.iterator(); iterator.hasNext(); ) {
+                        User user = iterator.next();
+                        if (!user.isConnection()) {
+                            iterator.remove();
+                            try {
+                                sendAll("/quit " + user.getName());
+                            } catch (IOException e) {
+                                // 로그 기록 등 적절한 예외 처리를 수행하세요
+                                e.printStackTrace();
+                            }
                         }
                     }
                 }
                 try {
                     Thread.sleep(500);
                 } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+                    // 현재 스레드가 인터럽트되면 루프를 빠져나가도록 처리
+                    Thread.currentThread().interrupt();
                 }
             }
         };
@@ -141,7 +146,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                 int userMoney = db.getUserMoney(name);
                 user = new User(clientSocket, name, out, userMoney);
             } else {
-                db.insertUser(name, 200);
+                db.insertUser(name);
                 user = new User(clientSocket, name, out);
                 System.out.println(user.getName() + " is added");
             }
@@ -154,9 +159,9 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             StringBuilder names = new StringBuilder();
             for (User u : users) {
                 names.append("/name").append(u.getName()).append(" ");
-                names.append("/money").append(u.getMoney()).append(" ");
             }
             sendAll(names.toString());
+            user.sendMessage("/money" + user.getMoney());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -201,42 +206,76 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             addCard(1, gameUsers);
             round.river();
             gameCount++;
-            if (!(gameUsers.size() == 0))
-                for (int i = 0; i < round.pots.size(); i++) {
-                    Pot pot = round.pots.get(i);
-                    determineWinners(pot, i, gameUsers);
-                }
+
+            for (int i = 0; i < round.pots.size(); i++) {
+                Pot pot = round.pots.get(i);
+                if(pot.potUser.size() == 0) continue;
+                determineWinners(pot, i, gameUsers);
+            }
             deck.initCard();
             currentTracker.game = false;
-            sendMoney(gameUsers);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
+            init(gameUsers);
+        } catch (SQLException | InterruptedException | ExecutionException | IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void sendMoney(List<User> users) throws IOException {
+    public void init(List<User> users) throws IOException, InterruptedException, SQLException, ExecutionException {
+        ExecutorService executorService = Executors.newFixedThreadPool(users.size());
+        List<Future<?>> futures = new ArrayList<>();
         for (User user : users) {
-            user.sendMessage("/money" + user.getMoney());
-            user.setState(User.State.LIVE);
-            user.hand.cards.clear();
+            futures.add(executorService.submit(() -> {
+                try {
+                    user.sendMessage("/money" + user.getMoney());
+                    user.setState(User.State.LIVE);
+                    sendAll(user.getName() + "님의 족보 : " + user.hand.handRank.name());
+                    user.hand.cards.clear();
+                    db.updateUserBalance(user.getName(), user.getMoney());
+                    user.receiveACK();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException | SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            }));
         }
+        for (Future<?> future : futures) {
+            future.get(); // Blocks until the task is completed
+        }
+        executorService.shutdown();
     }
 
-    public void givePersonalCard(List<User> users) throws IOException, InterruptedException {
-        for (int i = 0; i < 2; i++)
+
+    public void givePersonalCard(List<User> users) throws IOException, InterruptedException, ExecutionException {
+        ExecutorService executorService = Executors.newFixedThreadPool(users.size());
+        for (int i = 0; i < 2; i++) {
             for (User user : users) {
                 Card card = deck.drawCard();
                 user.hand.cards.add(card);
             }
-        for (User user : users) {
-            user.sendPersonalCard();
-            Thread.sleep(500);
         }
+        List<Future<?>> futures = new ArrayList<>();
+        for (User user : users) {
+            futures.add(executorService.submit(() -> {
+                try {
+                    user.sendPersonalCard();
+                    user.receiveACK();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }));
+        }
+        for (Future<?> future : futures) {
+            future.get(); // Blocks until the task is completed
+        }
+        executorService.shutdown();
     }
 
-    public void addCard(int count, List<User> users) throws IOException, InterruptedException {
+    public void addCard(int count, List<User> users) throws IOException, InterruptedException, ExecutionException {
+        ExecutorService executorService = Executors.newFixedThreadPool(users.size());
+
         StringBuilder cards = new StringBuilder();
         cards.append("/card").append(" ");
         for (int i = 0; i < count; i++) {
@@ -248,10 +287,24 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             cards.append(card.showCard()).append(" ");
         }
         String message = cards.toString();
+        List<Future<?>> futures = new ArrayList<>();
         for (User user : users) {
-            user.sendMessage(message + "/rank" + user.hand.determineHandRank().name());
-            Thread.sleep(500);
+            futures.add(executorService.submit(() -> {
+                try {
+                    user.hand.handRank = user.hand.determineHandRank();
+                    user.sendMessage(message + "/rank" + user.hand.handRank.name());
+                    user.receiveACK();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }));
         }
+        for (Future<?> future : futures) {
+            future.get(); // Blocks until the task is completed
+        }
+        executorService.shutdown();
     }
 
     public int compareHands(User p1, User p2) {
@@ -404,6 +457,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                 user.sendMessage("/win" + index);
                 int money = pot.getPotMoney() / currentWinners.size();
                 user.plusMoney(money);
+                sendAll("승자는 " + user.getName());
             } else user.sendMessage("/lose" + index);
         }
     }
@@ -423,17 +477,13 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             return rankComp;
         });
         rearrangeOrder(users, entry.get(0).getKey());
-        StringBuilder names = new StringBuilder();
-        for (User user : users)
-            names.append("/user").append(user.getName()).append(" ");
-        sendAll(names.toString());
         initUserCard();
         deck.initCard();
         deck.shuffle();
         dealerButton = true;
     }
 
-    public void rearrangeOrder(List<User> userOrder, int dealerButtonIndex) {
+    public void rearrangeOrder(List<User> userOrder, int dealerButtonIndex) throws IOException {
         List<User> newOrder = new ArrayList<>();
         for (int i = dealerButtonIndex; i < userOrder.size(); i++) {
             newOrder.add(userOrder.get(i));
@@ -442,6 +492,10 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             newOrder.add(userOrder.get(i));
         }
         users = newOrder;
+        StringBuilder names = new StringBuilder();
+        for (User user : users)
+            names.append("/user").append(user.getName()).append(" ");
+        sendAll(names.toString());
     }
 
     public void sendMsg(String message, User user) throws IOException {

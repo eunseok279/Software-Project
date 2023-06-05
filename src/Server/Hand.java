@@ -4,6 +4,7 @@ import java.util.*;
 
 public class Hand {
     List<Card> cards = new ArrayList<>();
+    HandRank handRank;
 
     public enum HandRank {
         ROYAL_FLUSH, STRAIGHT_FLUSH, FOUR_OF_A_KIND, FULL_HOUSE, FLUSH, STRAIGHT, THREE_OF_A_KIND, TWO_PAIR, ONE_PAIR, HIGH_CARD
@@ -192,15 +193,6 @@ public class Hand {
         return new HashSet<>(royalCards).containsAll(Arrays.asList(Rank.KING, Rank.JACK, Rank.QUEEN, Rank.TEN, Rank.ACE));
     }
 
-    public void showPedigree() {
-        System.out.println("/rank" + this.determineHandRank());
-    }
-
-    public void showHand() {
-        for (Card card : cards)
-            System.out.println(card.showCard());
-    }
-
     public List<Integer> getQuadsRank() {
         List<Integer> pairRanks = new ArrayList<>();
         Map<Integer, Integer> rankCounts = getRankCounts();
@@ -262,7 +254,6 @@ public class Hand {
 
     public Card getHighestCardInCombination() {
         // 스트레이트, 플러쉬, 스트레이트 플러쉬에 따라 가장 높은 카드를 찾기 위한 메서드
-        HandRank handRank = this.determineHandRank();
         Card highestCard;
 
         if (isFlush()) highestCard = findHighestCardInFlush();

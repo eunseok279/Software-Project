@@ -11,8 +11,6 @@ public class GUI {
     private JFrame chatFrame;
     private final JTextField nicknameField;
     private final JTextField serverIPField;
-    private static final long serialVersionUID = 1L;
-    private JTextArea chatArea = new JTextArea(40, 25);
     private TextArea ChatList = new TextArea(30, 50);
     private TextArea UserList = new TextArea(30, 15);
     private JTextField chatInput = new JTextField(45);
@@ -22,7 +20,6 @@ public class GUI {
     private JLabel moneyLabel = new JLabel();
     JLabel UserLabel = new JLabel("유저 목록");
     JLabel User = new JLabel();
-    private JScrollPane scrollPane;
     private boolean result = false;
     private boolean ready = false;
     private boolean game = false;
@@ -115,6 +112,7 @@ public class GUI {
         ClientGUIPanel.add(UserList);
         ClientGUIPanel.add(textAndButtonPanel);
         chatFrame.add(ClientGUIPanel);
+        chatFrame.setLocationRelativeTo(null);
     }
 
     public String getInputName() {
@@ -201,6 +199,7 @@ class GameGUI {
     private final JButton checkButton;
     private final JButton callButton;
     private final JButton raiseButton;
+    private final JButton allinButton;
     private final JLabel rankLabel;
     private final JLabel betLabel;
     private final JLabel potLabel;
@@ -309,7 +308,9 @@ class GameGUI {
         checkButton = new JButton("Check");
         callButton = new JButton("Call");
         raiseButton = new JButton("Bet/Raise");
+        allinButton = new JButton("AllIn");
 
+        inputPanel.add(allinButton);
         inputPanel.add(foldButton);
         inputPanel.add(checkButton);
         inputPanel.add(callButton);
@@ -414,5 +415,9 @@ class GameGUI {
 
     public void addWindowListener(JFrame frame, WindowAdapter listener) {
         frame.addWindowListener(listener);
+    }
+
+    public JButton getAllInButton() {
+        return allinButton;
     }
 }
