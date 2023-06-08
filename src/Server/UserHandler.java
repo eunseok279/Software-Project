@@ -2,20 +2,16 @@ package Server;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.net.SocketException;
-import java.util.List;
 
 public class UserHandler implements Runnable {
     private final User user;
-    private final List<User> users;
     BufferedReader in;
-    CurrentTracker currentTracker;
+    GameState gameState;
 
-    public UserHandler(User user, List<User> users, BufferedReader in, CurrentTracker currentTracker) throws IOException {
+    public UserHandler(User user, BufferedReader in, GameState gameState) throws IOException {
         this.user = user;
-        this.users = users;
         this.in = in;
-        this.currentTracker = currentTracker;
+        this.gameState = gameState;
     }
 
     @Override
@@ -29,16 +25,13 @@ public class UserHandler implements Runnable {
                     handleChat(message);
                 }
             }
-        } catch (SocketException e) {
-            currentTracker.index--;
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
             try {
                 sendAll("/quit" + user.getName());
                 in.close();
-                user.getSocket().close();
-                System.out.println(user.getName() + " is exit");
+                gameState.remove(user);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -51,9 +44,6 @@ public class UserHandler implements Runnable {
                 System.out.println("연결 종료 >> " + user.getName());
                 sendAll("/quit" + user.getName());
                 sendAll(user.getName() + "님이 나가셨습니다");
-                user.setConnection(false);
-                in.close();
-                user.out.close();
                 user.getSocket().close();
             } else if (command.startsWith("//ready")) {
                 user.setReady(true);
@@ -69,8 +59,8 @@ public class UserHandler implements Runnable {
                 user.setAck(true);
             }
         } else {
-            if (currentTracker.game) {
-                User currentUser = users.get(currentTracker.index);
+            if (gameState.game) {
+                User currentUser = gameState.gameUser.get(gameState.index);
                 if (user.equals(currentUser)) {
                     user.setCommand(command);
                     user.setAck(true);
@@ -87,7 +77,7 @@ public class UserHandler implements Runnable {
     }
 
     private void sendAll(String message) throws IOException {
-        for (User user : users) {
+        for (User user : gameState.users) {
             user.sendMessage(message);
         }
     }

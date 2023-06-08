@@ -126,26 +126,8 @@ public class User {
         }
         ack = false;
     }
-    void receiveACK() throws InterruptedException {
-        ack = false;
-        Runnable foldTask = () -> {
-            ack = true;
-            connection = false;
-        };
-        scheduledFuture = executorService.schedule(foldTask, 5, TimeUnit.SECONDS);
-        while (!ack) {
-            Thread.sleep(100);
-        }
-        ack = false;
-        scheduledFuture.cancel(false);
-    }
-
-    public void setConnection(boolean connection) {
-        this.connection = connection;
-    }
-
     public boolean isConnection() {
-        return connection;
+        return !connection;
     }
 
     public void chooseBetAction(int minimumBet, int basicBet, boolean noBet) throws IOException, InterruptedException { // basicBet = 앞 사람의 배팅금// currentBet = 현재 내놓은 배팅금
@@ -164,7 +146,7 @@ public class User {
                             this.bet.fold();
                             break;
                         } else if (command.startsWith("/check")) { // 체크
-                            result = this.bet.check(basicBet);
+                            result = this.bet.check(0);
                             if(result)break;
                         } else if(command.startsWith("/allin")){
                             this.bet.allIn();

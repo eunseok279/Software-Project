@@ -14,17 +14,22 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-class CurrentTracker {
+class GameState {
     int index = 0;
     boolean game = false;
+    List<User> gameUser;
+    List<User> users = Collections.synchronizedList(new ArrayList<>());
+
+    public synchronized void remove(User user) {
+        users.remove(user);
+    }
 }
 
 public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     List<Card> tableCard = new ArrayList<>(); // table 있는 패
     Deck deck = new Deck();
-    List<User> users = Collections.synchronizedList(new ArrayList<>());
     ExecutorService executorService = Executors.newCachedThreadPool();
-    CurrentTracker currentTracker = new CurrentTracker();
+    GameState gameState = new GameState();
     int gameCount = 1;
     int baseBet = 4;
     boolean dealerButton = false;
@@ -42,8 +47,8 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         Runnable connectionHandler = () -> {
             try (ServerSocket serverSocket = new ServerSocket(port)) {
                 while (true) {
-                    synchronized (users) {
-                        if (users.size() >= 8) {
+                    synchronized (gameState.users) {
+                        if (gameState.users.size() >= 8) {
                             continue;
                         }
                     }
@@ -60,9 +65,9 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
 // 준비 상태를 확인하는 스레드
         Runnable readyChecker = () -> {
             while (true) {
-                if (users.size() >= 2) {
+                if (gameState.users.size() >= 2) {
                     boolean allReady = true;
-                    for (User user : users) {
+                    for (User user : gameState.users) {
                         if (!user.isReady()) {
                             allReady = false;
                             break;
@@ -72,7 +77,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                         try {
                             sendAll("모든 플레이어가 준비가 완료되었습니다...");
                             System.out.println("game is start");
-                            for (User user : users) {
+                            for (User user : gameState.users) {
                                 user.setReady(false);
                             }
                         } catch (IOException e) {
@@ -81,6 +86,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                         gameStart();
                     }
                 }
+                else dealerButton = false;
                 try {
                     Thread.sleep(1000);  // 1초마다 준비 상태 확인
                 } catch (InterruptedException e) {
@@ -92,24 +98,14 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
 
         Runnable checkConnect = () -> {
             while (!Thread.currentThread().isInterrupted()) {
-                synchronized (users) {
-                    for (Iterator<User> iterator = users.iterator(); iterator.hasNext(); ) {
-                        User user = iterator.next();
-                        if (!user.isConnection()) {
-                            iterator.remove();
-                            try {
-                                sendAll("/quit " + user.getName());
-                            } catch (IOException e) {
-                                // 로그 기록 등 적절한 예외 처리를 수행하세요
-                                e.printStackTrace();
-                            }
-                        }
+                synchronized (gameState.users) {
+                    for (User user : gameState.users) {
+                        if (user.isConnection()) gameState.remove(user);
                     }
                 }
                 try {
                     Thread.sleep(500);
                 } catch (InterruptedException e) {
-                    // 현재 스레드가 인터럽트되면 루프를 빠져나가도록 처리
                     Thread.currentThread().interrupt();
                 }
             }
@@ -131,14 +127,13 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             String name = receiveName.substring(5);
             User user;
             if (db.checkUser(name)) {
-                synchronized (users) {
-                    for (User u : users) {
+                synchronized (gameState.users) {
+                    for (User u : gameState.users) {
                         if (u.getName().equals(name)) {
                             out.println("중복 접속입니다.");
                             in.close();
                             out.close();
                             clientSocket.close();
-                            users.remove(u);
                             return;
                         }
                     }
@@ -150,14 +145,14 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                 user = new User(clientSocket, name, out);
                 System.out.println(user.getName() + " is added");
             }
-            users.add(user);
+            gameState.users.add(user);
+            UserHandler handler = new UserHandler(user, in, gameState);
+            executorService.submit(handler);
             System.out.println(user.getName() + " is joined!");
             sendAll(user.getName() + "님이 들어왔습니다.");
-            UserHandler handler = new UserHandler(user, users, in, currentTracker);
-            executorService.submit(handler);
-            sendMsg("환영합니다!!", user);
+            user.sendMessage("환영합니다!!");
             StringBuilder names = new StringBuilder();
-            for (User u : users) {
+            for (User u : gameState.users) {
                 names.append("/name").append(u.getName()).append(" ");
             }
             sendAll(names.toString());
@@ -170,51 +165,54 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     // 게임 시작
     public void gameStart() {
         try {
-            currentTracker.game = true;
-            List<User> gameUsers = new ArrayList<>(users);
+            gameState.game = true;
+            gameState.gameUser = new ArrayList<>(gameState.users);
             if (gameCount == 3) {
                 gameCount = 1;
                 baseBet *= 2;
             }
-            for (User user : gameUsers) {
+
+            Iterator<User> iterator = gameState.gameUser.iterator();
+            while (iterator.hasNext()) {
+                User user = iterator.next();
                 user.sendMessage("/money" + user.getMoney());
                 if (user.getMoney() < baseBet) {
                     user.sendMessage("기본 배팅금이 부족합니다.");
-                    gameUsers.remove(user);
-                } else {
-                    user.sendMessage("/game");
+                    iterator.remove();
                 }
             }
-            if (gameUsers.size() < 2) return;
+
+            if (gameState.gameUser.size() < 2) return;
             if (!dealerButton) {
                 System.out.println("Set Dealer Button");
-                setDealerButton(gameUsers);
-            } else rearrangeOrder(gameUsers, 1);
+                setDealerButton(gameState.gameUser);
+            } else rearrangeOrder(gameState.gameUser, 1);
 
-            if (gameUsers.size() == 2) currentTracker.index = 0;
-            else if (gameUsers.size() == 3) currentTracker.index = 0;
-            else currentTracker.index = 3;
-            Round round = new Round(gameUsers, baseBet, currentTracker);
+            if (gameState.gameUser.size() == 2) gameState.index = 0;
+            else if (gameState.gameUser.size() == 3) gameState.index = 0;
+            else gameState.index = 3;
+            Round round = new Round(gameState.gameUser, baseBet, gameState);
             round.smallBlind();
             round.bigBlind();
-            givePersonalCard(gameUsers);
+            givePersonalCard(gameState.gameUser);
             round.freeFlop(); // 빅블라인드 다음 사람부터 시작
-            addCard(3, gameUsers);
+            addCard(3, gameState.gameUser);
             round.flop();
-            addCard(1, gameUsers);
+            addCard(1, gameState.gameUser);
             round.turn();
-            addCard(1, gameUsers);
+            addCard(1, gameState.gameUser);
             round.river();
             gameCount++;
 
             for (int i = 0; i < round.pots.size(); i++) {
                 Pot pot = round.pots.get(i);
-                if(pot.potUser.size() == 0) continue;
-                determineWinners(pot, i, gameUsers);
+                if (pot.potUser.size() == 0) continue;
+                determineWinners(pot, i);
             }
             deck.initCard();
-            currentTracker.game = false;
-            init(gameUsers);
+            deck.shuffle();
+            gameState.game = false;
+            init(gameState.gameUser);
         } catch (SQLException | InterruptedException | ExecutionException | IOException e) {
             throw new RuntimeException(e);
         }
@@ -231,10 +229,10 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                     sendAll(user.getName() + "님의 족보 : " + user.hand.handRank.name());
                     user.hand.cards.clear();
                     db.updateUserBalance(user.getName(), user.getMoney());
-                    user.receiveACK();
+                    //user.receiveACK();
                 } catch (IOException e) {
                     e.printStackTrace();
-                } catch (InterruptedException | SQLException e) {
+                } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
             }));
@@ -259,11 +257,9 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             futures.add(executorService.submit(() -> {
                 try {
                     user.sendPersonalCard();
-                    user.receiveACK();
+                    //user.receiveACK();
                 } catch (IOException e) {
                     e.printStackTrace();
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
                 }
             }));
         }
@@ -293,11 +289,9 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                 try {
                     user.hand.handRank = user.hand.determineHandRank();
                     user.sendMessage(message + "/rank" + user.hand.handRank.name());
-                    user.receiveACK();
+                    //user.receiveACK();
                 } catch (IOException e) {
                     e.printStackTrace();
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
                 }
             }));
         }
@@ -433,7 +427,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         return Integer.compare(h1Kicker, h2Kicker);
     }
 
-    public void determineWinners(Pot pot, int index, List<User> users) throws IOException {
+    public void determineWinners(Pot pot, int index) throws IOException {
         List<User> currentWinners = new ArrayList<>();
         Iterator<User> itr = pot.potUser.iterator();
         User currentUser = itr.next();
@@ -452,7 +446,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             }
         }
 
-        for (User user : users) {
+        for (User user : pot.potUser) {
             if (currentWinners.contains(user)) {
                 user.sendMessage("/win" + index);
                 int money = pot.getPotMoney() / currentWinners.size();
@@ -491,11 +485,15 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         for (int i = 0; i < dealerButtonIndex; i++) {
             newOrder.add(userOrder.get(i));
         }
-        users = newOrder;
+        userOrder = newOrder;
         StringBuilder names = new StringBuilder();
-        for (User user : users)
+        for (User user : userOrder) {
+            sendMsg("/game", user);
             names.append("/user").append(user.getName()).append(" ");
-        sendAll(names.toString());
+        }
+        for (User user : userOrder) {
+            sendMsg(names.toString(), user);
+        }
     }
 
     public void sendMsg(String message, User user) throws IOException {
@@ -503,13 +501,15 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     }
 
     public void sendAll(String message) throws IOException {
-        for (User user : users) {
-            user.sendMessage(message);
+        synchronized (gameState.users) {
+            for (User user : gameState.users) {
+                user.sendMessage(message);
+            }
         }
     }
 
     public void initUserCard() {
-        for (User user : users)
+        for (User user : gameState.users)
             user.hand.cards.clear();
     }
 }

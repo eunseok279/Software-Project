@@ -12,7 +12,7 @@ public class Deck { // 카드 드로우, 섞기
     }
 
     public void initCard() {
-        this.cards = new ArrayList<Card>();
+        this.cards = new ArrayList<>();
         Suit[] suits = Suit.values();
         Rank[] ranks = Rank.values();
 
@@ -31,12 +31,5 @@ public class Deck { // 카드 드로우, 섞기
         Card card = cards.get(0);
         cards.remove(0);
         return card;
-    }
-
-    public void print() {
-        for (int i = 0; i < 52; i++) {
-            Card card = cards.get(i);
-            System.out.println(card.showCard());
-        }
     }
 }

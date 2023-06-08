@@ -22,9 +22,10 @@ public class Controller {
     List<String> nameList = new ArrayList<>();
     Map<String, Image> cardImages = new HashMap<>();
     List<JPanel> gameUser = new ArrayList<>();
-    int cardCount = 0;
-    boolean connectResult = false;
+    private int cardCount = 0;
+    private boolean connectResult = false;
     boolean send = false;
+    private Timer timer;
 
     public Controller(Client client, GUI gui) {
         this.client = client;
@@ -60,7 +61,7 @@ public class Controller {
         });
     }
 
-    public void setGui() {
+    private void setGui() {
 
         gui.addTextFieldListener(gui.getChatInput(), e -> {
             String text = gui.getChatInput().getText().trim();
@@ -99,7 +100,7 @@ public class Controller {
         });
     }
 
-    public void setGameGUI() {
+    private void setGameGUI() {
         this.gameGUI.getCallButton().addActionListener(e -> {
             try {
                 client.sendMessage("/call");
@@ -179,7 +180,7 @@ public class Controller {
         }
     }
 
-    public void appendInfo(String message) throws IOException {
+    public void appendInfo(String message) {
         if (gui.isGame()) {
             if (message.startsWith("/money")) {
                 message = message + "$";
@@ -194,18 +195,14 @@ public class Controller {
                 gui.getMoneyLabel().setText(message.substring(6));
             }
         }
-        client.sendMessage("//ack");
     }
 
-    public void addCard(String suit, String rank) throws IOException {
-        SwingUtilities.invokeLater(() -> {
+    public void addCard(String suit, String rank) {
             if (cardCount < 2) gameGUI.getPersonalPanel().add(new JLabel(new ImageIcon(cardImages.get(suit + rank))));
             else gameGUI.getCommunityPanel().add(new JLabel(new ImageIcon(cardImages.get(suit + rank))));
 
             cardCount++;
             if (cardCount == 7) cardCount = 0;
-        });
-        client.sendMessage("//ack");
     }
 
     public void winner(String index) {
@@ -306,10 +303,14 @@ public class Controller {
     }
 
     public void startTime() throws IOException {
+        if (timer != null) {
+            timer.stop();
+        }
+
         client.sendMessage("//ack");
         AtomicInteger time = new AtomicInteger(30);
 
-        Timer timer = new Timer(1000, e -> {
+        timer = new Timer(1000, e -> {
             int remainingTime = time.decrementAndGet();
             gameGUI.getTimeLabel().setText(Integer.toString(remainingTime));
             if (remainingTime < 0 || send) {
