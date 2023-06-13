@@ -364,11 +364,6 @@ class GameGUI {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
-
-    public static void main(String[] args) {
-        new GameGUI();
-    }
-
     public JFrame getFrame() {
         return frame;
     }

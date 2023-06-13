@@ -40,11 +40,12 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         Class.forName("com.mysql.cj.jdbc.Driver");
         db.con = DriverManager.getConnection(db.url, db.user, db.passwd);
         db.stmt = db.con.createStatement();
-        System.out.println("wait for Users...");
 
         // 클라이언트 연결을 받는 스레드
 
         Runnable connectionHandler = () -> {
+            System.out.println("서버가 열렸습니다");
+            System.out.println("유저 연결을 기다리는 중...");
             try (ServerSocket serverSocket = new ServerSocket(port)) {
                 while (true) {
                     synchronized (gameState.users) {
@@ -56,7 +57,13 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                     executorService.submit(() -> createUser(clientSocket));
                 }
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                for(User user : gameState.users) {
+                    try {
+                        user.getSocket().close();
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
             }
         };
 

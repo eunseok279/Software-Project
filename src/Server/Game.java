@@ -6,8 +6,9 @@ import java.sql.SQLException;
 
 public class Game {
     Dealer dealer = new Dealer();
-    public Game() throws ClassNotFoundException, SQLException, IOException {
+    public Game() throws ClassNotFoundException, SQLException {
         int port = 8080;
+        System.out.println("현재 사용 포트 >> "+port);
         dealer.setUpGame(port);
     }
 

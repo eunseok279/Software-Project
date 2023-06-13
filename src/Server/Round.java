@@ -210,7 +210,7 @@ public class Round {
     private int findIfSBFold() {
         if (users.size() == 2) return 0;
         int idx;
-        for (idx = 1; idx < users.size(); idx++) {
+        for (idx = 1; idx < users.size();) {
             if (!(users.get(idx).getState() == User.State.FOLD)) {
                 return idx;
             }
