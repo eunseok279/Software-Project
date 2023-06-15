@@ -92,7 +92,6 @@ public class Round {
         boolean allin = false;
         sendState();
         while (turn < userCount) {
-            checkRemainUser();
             if (isGameUnplayable) break;
             User currentUser = users.get(gameState.index);
             if (canUserBet(currentUser)) {
@@ -152,6 +151,7 @@ public class Round {
             user.setCurrentBet(0);
             sendInfo(user);
         }
+        checkRemainUser();
     }
 
     private void sendInfo(User currentUser) throws IOException { // 개인 유저에게 소지금, 현재 베팅금, 팟에 들어간 금액
@@ -202,7 +202,7 @@ public class Round {
     private void checkRemainUser() { // 배팅할 수 있는 사람(올인 포함)이 2명 미만이면 라운드 스킵
         int count = 0;
         for (User user : users) {
-            if (!(user.getState() == User.State.FOLD)) count++;
+            if (!(user.getState() == User.State.FOLD)&&!(user.getState()== User.State.DEPLETED)) count++;
         }
         if (count < 2) isGameUnplayable = true;
     }
@@ -229,6 +229,7 @@ public class Round {
                         min = user.getAlreadyBet();
             }
         }
+        if(min == 0) min = 99999;
         return min;
     }
 

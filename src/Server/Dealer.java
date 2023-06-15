@@ -57,7 +57,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                     executorService.submit(() -> createUser(clientSocket));
                 }
             } catch (IOException e) {
-                for(User user : gameState.users) {
+                for (User user : gameState.users) {
                     try {
                         user.getSocket().close();
                     } catch (IOException ex) {
@@ -92,8 +92,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                         }
                         gameStart();
                     }
-                }
-                else dealerButton = false;
+                } else dealerButton = false;
                 try {
                     Thread.sleep(1000);  // 1초마다 준비 상태 확인
                 } catch (InterruptedException e) {
@@ -232,11 +231,13 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             futures.add(executorService.submit(() -> {
                 try {
                     user.sendMessage("/money" + user.getMoney());
+                    if (user.getState() == User.State.FOLD) sendAll(user.getName() + "님 >> FOLD");
+                    else if(user.hand.kicker == 0) sendAll(user.getName() + "님의 족보 : " + user.hand.handRank.name());
+                    else sendAll(user.getName() + "님의 족보 : " + user.hand.handRank.name()+" 키커 : "+user.hand.kicker);
                     user.setState(User.State.LIVE);
-                    sendAll(user.getName() + "님의 족보 : " + user.hand.handRank.name());
                     user.hand.cards.clear();
+                    user.hand.kicker = 0;
                     db.updateUserBalance(user.getName(), user.getMoney());
-                    //user.receiveACK();
                 } catch (IOException e) {
                     e.printStackTrace();
                 } catch (SQLException e) {
@@ -264,7 +265,6 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             futures.add(executorService.submit(() -> {
                 try {
                     user.sendPersonalCard();
-                    //user.receiveACK();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -296,7 +296,6 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                 try {
                     user.hand.handRank = user.hand.determineHandRank();
                     user.sendMessage(message + "/rank" + user.hand.handRank.name());
-                    //user.receiveACK();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -352,9 +351,9 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         if (higherPairComparison != 0) {
             return higherPairComparison;
         }
-        int h1Kicker = h1.getKickerRank(h1Three);
-        int h2Kicker = h2.getKickerRank(h2Three);
-        return Integer.compare(h1Kicker, h2Kicker);
+        h1.kicker = h1.getKickerRank(h1Three);
+        h2.kicker = h2.getKickerRank(h2Three);
+        return Integer.compare( h1.kicker, h2.kicker);
     }
 
     private int compareHighestCardInTurn(Hand h1, Hand h2) {
@@ -379,9 +378,9 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         if (higherPairComparison != 0) {
             return higherPairComparison;
         }
-        int h1Kicker = h1.getKickerRank(h1Quad);
-        int h2Kicker = h2.getKickerRank(h2Quad);
-        return Integer.compare(h1Kicker, h2Kicker);
+        h1.kicker = h1.getKickerRank(h1Quad);
+        h2.kicker = h2.getKickerRank(h2Quad);
+        return Integer.compare( h1.kicker, h2.kicker);
     }
 
     private int compareTripsAndPair(Hand h1, Hand h2) {
@@ -416,9 +415,9 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         }
 
         // 킥커(남은 카드)를 비교합니다.
-        int h1Kicker = h1.getKickerRank(h1PairRanks);
-        int h2Kicker = h2.getKickerRank(h2PairRanks);
-        return Integer.compare(h1Kicker, h2Kicker);
+        h1.kicker = h1.getKickerRank(h1PairRanks);
+        h2.kicker = h2.getKickerRank(h2PairRanks);
+        return Integer.compare( h1.kicker, h2.kicker);
     }
 
     private int comparePairAndKickers(Hand h1, Hand h2) {
@@ -429,9 +428,9 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         if (higherPairComparison != 0) {
             return higherPairComparison;
         }
-        int h1Kicker = h1.getKickerRank(h1PairRanks);
-        int h2Kicker = h2.getKickerRank(h2PairRanks);
-        return Integer.compare(h1Kicker, h2Kicker);
+        h1.kicker = h1.getKickerRank(h1PairRanks);
+        h2.kicker = h2.getKickerRank(h2PairRanks);
+        return Integer.compare(h1.kicker, h2.kicker);
     }
 
     public void determineWinners(Pot pot, int index) throws IOException {
@@ -453,13 +452,14 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             }
         }
 
-        for (User user : pot.potUser) {
+        for (User user : gameState.users) {
             if (currentWinners.contains(user)) {
                 user.sendMessage("/win" + index);
                 int money = pot.getPotMoney() / currentWinners.size();
                 user.plusMoney(money);
                 sendAll("승자는 " + user.getName());
-            } else user.sendMessage("/lose" + index);
+            } else
+                user.sendMessage("/lose" + index);
         }
     }
 

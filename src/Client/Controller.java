@@ -211,9 +211,9 @@ public class Controller {
             gui.setGame(false);
             gui.openChatWindow();
             JOptionPane.showMessageDialog(gameGUI.getFrame(), "메인 팟을 이겼습니다!!");
+            gameUser.clear();
         }
         else JOptionPane.showMessageDialog(gameGUI.getFrame(), "사이드 팟 " + index + "을 이겼습니다!!");
-        gameUser.clear();
     }
 
     public void loser(String index) {
@@ -222,9 +222,9 @@ public class Controller {
             gui.setGame(false);
             gui.openChatWindow();
             JOptionPane.showMessageDialog(gameGUI.getFrame(), "메인 팟에 졌습니다");
+            gameUser.clear();
         }
         else JOptionPane.showMessageDialog(gameGUI.getFrame(), "사이드 팟 " + index + "에 졌습니다");
-        gameUser.clear();
     }
 
     public void startGame() {
