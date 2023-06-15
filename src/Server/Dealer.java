@@ -44,7 +44,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         // 클라이언트 연결을 받는 스레드
 
         Runnable connectionHandler = () -> {
-            System.out.println("서버가 열렸습니다");
+            System.out.println("서버가 열렸습니다!");
             System.out.println("유저 연결을 기다리는 중...");
             try (ServerSocket serverSocket = new ServerSocket(port)) {
                 while (true) {
@@ -92,7 +92,10 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                         }
                         gameStart();
                     }
-                } else dealerButton = false;
+                } else {
+                    dealerButton = false;
+                    baseBet = 4;
+                }
                 try {
                     Thread.sleep(1000);  // 1초마다 준비 상태 확인
                 } catch (InterruptedException e) {
