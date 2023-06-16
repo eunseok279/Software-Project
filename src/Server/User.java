@@ -31,7 +31,7 @@ public class User {
     private final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> scheduledFuture;
 
-
+    // 기존 유저
     public User(Socket socket, String name, PrintWriter out, int money) throws IOException {
         this(socket, name, out);
         this.money = money;
@@ -40,7 +40,7 @@ public class User {
         bet = new Bet(this);
         hand = new Hand();
     }
-
+    // 신규 유저
     public User(Socket socket, String name, PrintWriter out) throws IOException {
         this.socket = socket;
         this.name = name;
@@ -114,7 +114,7 @@ public class User {
         this.ack = ack;
     }
 
-    private void commandACK() throws InterruptedException {
+    private void commandACK() throws InterruptedException { // 30초가 지나면 자동으로 폴드 처리
         Runnable foldTask = () -> {
             setCommand("/fold");
             ack = true;
@@ -129,7 +129,7 @@ public class User {
     public boolean isConnection() {
         return !connection;
     }
-
+    // 배팅 액션
     public void chooseBetAction(int minimumBet, int basicBet, boolean noBet) throws IOException, InterruptedException { // basicBet = 앞 사람의 배팅금// currentBet = 현재 내놓은 배팅금
         result = false;
         commandACK();
@@ -182,40 +182,40 @@ public class User {
         scheduledFuture.cancel(false);
         sendMessage("/send");
     }
-
+    // 올인 상황 발생
     public void respondToAllIn(boolean allin, int basicBet) throws IOException, InterruptedException {
         result = false;
         commandACK();
         while (true) {
             try {
-                Thread.sleep(100); // 0.1초마다 확인
+                Thread.sleep(100);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            if (command != null) {
+            if (command != null) { // 입력이 됐으면
                 synchronized (command) {
-                    if (allin) {
-                        if (command.startsWith("/allin")) {
+                    if (allin) { // 올인한 돈보다 적은 상태
+                        if (command.startsWith("/allin")) { // 올인
                             bet.allIn();
                             break;
-                        } else if (command.startsWith("/fold")) {
+                        } else if (command.startsWith("/fold")) { // 폴드
                             bet.fold();
                             break;
                         } else {
                             sendMessage("/error잘못된 선택입니다.");
                         }
                     } else {
-                        if (command.startsWith("/call")) {
+                        if (command.startsWith("/call")) { // 콜
                             result = bet.call(basicBet - alreadyBet); // 기본 배팅 - 나의 배팅금
                             if (result) break;
-                        } else if (command.startsWith("/fold")) {
+                        } else if (command.startsWith("/fold")) { // 폴드
                             bet.fold();
                             break;
-                        } else if (command.startsWith("/raise")) {
+                        } else if (command.startsWith("/raise")) { // 레이즈
                             int raiseMoney = Integer.parseInt(command.substring(6));
                             result = bet.raise(raiseMoney, basicBet);
                             if (result) break;
-                        } else if(command.startsWith("/allin")){
+                        } else if(command.startsWith("/allin")){ // 올인
                             bet.allIn();
                             break;
                         }else {

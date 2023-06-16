@@ -14,11 +14,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-class GameState {
-    int index = 0;
-    boolean game = false;
-    List<User> gameUser;
-    List<User> users = Collections.synchronizedList(new ArrayList<>());
+class GameState { // 게임 정보 저장
+    int index = 0; // 현재 플레이어
+    boolean game = false; // 게임 진행 상태
+    List<User> gameUser; // 게임 유저
+    List<User> users = Collections.synchronizedList(new ArrayList<>()); // 전체 유저
 
     public synchronized void remove(User user) {
         users.remove(user);
@@ -26,7 +26,7 @@ class GameState {
 }
 
 public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
-    List<Card> tableCard = new ArrayList<>(); // table 있는 패
+    List<Card> tableCard = new ArrayList<>(); // 공용카드
     Deck deck = new Deck();
     ExecutorService executorService = Executors.newCachedThreadPool();
     GameState gameState = new GameState();
@@ -36,13 +36,12 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
     Database db = new Database();
     private Socket clientSocket;
 
-    public void setUpGame(int port) throws ClassNotFoundException, SQLException {
+    public void setUpGame(int port) throws ClassNotFoundException, SQLException { // 게임 setup
         Class.forName("com.mysql.cj.jdbc.Driver");
         db.con = DriverManager.getConnection(db.url, db.user, db.passwd);
         db.stmt = db.con.createStatement();
 
         // 클라이언트 연결을 받는 스레드
-
         Runnable connectionHandler = () -> {
             System.out.println("서버가 열렸습니다!");
             System.out.println("유저 연결을 기다리는 중...");
@@ -69,7 +68,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
 
         executorService.submit(connectionHandler);
 
-// 준비 상태를 확인하는 스레드
+        // 준비 상태를 확인하는 스레드
         Runnable readyChecker = () -> {
             while (true) {
                 if (gameState.users.size() >= 2) {
@@ -97,7 +96,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                     baseBet = 4;
                 }
                 try {
-                    Thread.sleep(1000);  // 1초마다 준비 상태 확인
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -105,7 +104,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         };
         executorService.submit(readyChecker);
 
-        Runnable checkConnect = () -> {
+        Runnable checkConnect = () -> { // 유저의 연결 확인
             while (!Thread.currentThread().isInterrupted()) {
                 synchronized (gameState.users) {
                     for (User user : gameState.users) {
@@ -122,7 +121,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         executorService.submit(checkConnect);
     }
 
-    public void createUser(Socket clientSocket) {
+    public void createUser(Socket clientSocket) { // 유저 생성
         try {
             BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             PrintWriter out = new PrintWriter((clientSocket.getOutputStream()));
@@ -135,7 +134,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             }
             String name = receiveName.substring(5);
             User user;
-            if (db.checkUser(name)) {
+            if (db.checkUser(name)) { // DB에서 닉네임 중복 체크
                 synchronized (gameState.users) {
                     for (User u : gameState.users) {
                         if (u.getName().equals(name)) {
@@ -148,14 +147,14 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
                     }
                 }
                 int userMoney = db.getUserMoney(name);
-                user = new User(clientSocket, name, out, userMoney);
+                user = new User(clientSocket, name, out, userMoney); // 기존 유저
             } else {
                 db.insertUser(name);
-                user = new User(clientSocket, name, out);
+                user = new User(clientSocket, name, out); // 신규 유저
                 System.out.println(user.getName() + " is added");
             }
             gameState.users.add(user);
-            UserHandler handler = new UserHandler(user, in, gameState);
+            UserHandler handler = new UserHandler(user, in, gameState); // 유저 제어 쓰레드 생성
             executorService.submit(handler);
             System.out.println(user.getName() + " is joined!");
             sendAll(user.getName() + "님이 들어왔습니다.");
@@ -171,18 +170,17 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         }
     }
 
-    // 게임 시작
-    public void gameStart() {
+    public void gameStart() { // 게임 시작
         try {
             gameState.game = true;
             gameState.gameUser = new ArrayList<>(gameState.users);
-            if (gameCount == 3) {
+            if (gameCount == 3) { // 게임 라운드가 지날 수록 기본 배팅금 증가
                 gameCount = 1;
                 baseBet *= 2;
             }
 
             Iterator<User> iterator = gameState.gameUser.iterator();
-            while (iterator.hasNext()) {
+            while (iterator.hasNext()) { // 기본 배팅금 검사
                 User user = iterator.next();
                 user.sendMessage("/money" + user.getMoney());
                 if (user.getMoney() < baseBet) {
@@ -192,7 +190,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             }
 
             if (gameState.gameUser.size() < 2) return;
-            if (!dealerButton) {
+            if (!dealerButton) { // 첫 판이면 딜러버튼 설정
                 System.out.println("Set Dealer Button");
                 setDealerButton(gameState.gameUser);
             } else rearrangeOrder(gameState.gameUser, 1);
@@ -201,22 +199,22 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             else if (gameState.gameUser.size() == 3) gameState.index = 0;
             else gameState.index = 3;
             Round round = new Round(gameState.gameUser, baseBet, gameState);
-            round.smallBlind();
-            round.bigBlind();
-            givePersonalCard(gameState.gameUser);
+            round.smallBlind(); // 스몰 블라인드 배팅
+            round.bigBlind(); // 빅 블라인드 배팅
+            givePersonalCard(gameState.gameUser); // 개인 카드 2장 배분
             round.freeFlop(); // 빅블라인드 다음 사람부터 시작
-            addCard(3, gameState.gameUser);
-            round.flop();
-            addCard(1, gameState.gameUser);
-            round.turn();
-            addCard(1, gameState.gameUser);
-            round.river();
+            addCard(3, gameState.gameUser); // 공용카드 3장 공개
+            round.flop(); // 플롭 라운드
+            addCard(1, gameState.gameUser); // 공용카드 1장 공개
+            round.turn(); // 턴 라운드
+            addCard(1, gameState.gameUser); // 공용카드 1장 공개
+            round.river(); // 리버 라운드
             gameCount++;
 
             for (int i = 0; i < round.pots.size(); i++) {
                 Pot pot = round.pots.get(i);
                 if (pot.potUser.size() == 0) continue;
-                determineWinners(pot, i);
+                determineWinners(pot, i); // 승자 지정
             }
             deck.initCard();
             deck.shuffle();
@@ -227,6 +225,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         }
     }
 
+    // 유저 정보 초기화
     public void init(List<User> users) throws IOException, InterruptedException, SQLException, ExecutionException {
         ExecutorService executorService = Executors.newFixedThreadPool(users.size());
         List<Future<?>> futures = new ArrayList<>();
@@ -249,12 +248,12 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             }));
         }
         for (Future<?> future : futures) {
-            future.get(); // Blocks until the task is completed
+            future.get();
         }
         executorService.shutdown();
     }
 
-
+    // 개인 카드 분배
     public void givePersonalCard(List<User> users) throws IOException, InterruptedException, ExecutionException {
         ExecutorService executorService = Executors.newFixedThreadPool(users.size());
         for (int i = 0; i < 2; i++) {
@@ -274,11 +273,12 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
             }));
         }
         for (Future<?> future : futures) {
-            future.get(); // Blocks until the task is completed
+            future.get();
         }
         executorService.shutdown();
     }
 
+    // 공용카드 오픈
     public void addCard(int count, List<User> users) throws IOException, InterruptedException, ExecutionException {
         ExecutorService executorService = Executors.newFixedThreadPool(users.size());
 
@@ -310,7 +310,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         executorService.shutdown();
     }
 
-    public int compareHands(User p1, User p2) {
+    public int compareHands(User p1, User p2) { // 손 패 비교
         Hand.HandRank p1HandRank = p1.hand.determineHandRank();
         Hand.HandRank p2HandRank = p2.hand.determineHandRank();
 
@@ -466,7 +466,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         }
     }
 
-    private void setDealerButton(List<User> users) throws IOException {
+    private void setDealerButton(List<User> users) throws IOException {// 딜러버튼 설정
         deck.shuffle();
         sendAll("Set Dealer Button");
         Map<Integer, Card> cardMap = new HashMap<>();
@@ -487,6 +487,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         dealerButton = true;
     }
 
+    // 딜러버튼을 중심으로 재배치
     public void rearrangeOrder(List<User> userOrder, int dealerButtonIndex) throws IOException {
         List<User> newOrder = new ArrayList<>();
         for (int i = dealerButtonIndex; i < userOrder.size(); i++) {
@@ -506,7 +507,7 @@ public class Dealer { // 판을 깔아줄 컴퓨터 및 시스템
         }
     }
 
-    public void sendMsg(String message, User user) throws IOException {
+    public void sendMsg(String message, User user) throws IOException { // 메세지 전송
         user.sendMessage(message);
     }
 

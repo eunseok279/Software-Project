@@ -5,9 +5,9 @@ import java.sql.*;
 public class Database {
     Connection con = null;
     Statement stmt = null;
-    String url = "jdbc:mysql://18.191.149.53/testdb?serverTimezone=Asia/Seoul";    //dbstudy스키마
+    String url = "jdbc:mysql://18.191.149.53/testdb?serverTimezone=Asia/Seoul";
     String user = "tester";
-    String passwd = "test";        //MySQL에 저장한 root 계정의 비밀번호를 적어주면 된다.
+    String passwd = "test";
 
     public Database() {
         try {
@@ -21,7 +21,7 @@ public class Database {
     }
 
     //삽입
-    void insertUser(String userName) {
+    void insertUser(String userName) { // 유저 추가
         try {
             String insertStr = "INSERT INTO users (name, money) VALUES('" + userName + "','" + 200 + "')";
             stmt.executeUpdate(insertStr);
@@ -30,7 +30,7 @@ public class Database {
         }
     }
 
-    boolean checkUser(String userName) {
+    boolean checkUser(String userName) { // 유저 확인
         boolean flag = false;
 
         try {
@@ -47,7 +47,7 @@ public class Database {
         return flag;
     }
 
-    int getUserMoney(String userName) {
+    int getUserMoney(String userName) { // 유저 소지금 확인
         int money = 0;
         try {
             String checkMoney = "SELECT money FROM users WHERE name= '" + userName + "'";
@@ -63,7 +63,7 @@ public class Database {
 
 
     //삭제
-    public void updateUserBalance(String userName, int money) throws SQLException {
+    public void updateUserBalance(String userName, int money) throws SQLException { // 유저 소지금 업데이트
         String sqlUpdate = "UPDATE users SET money = ? WHERE name = ?";
 
         PreparedStatement pstmt = con.prepareStatement(sqlUpdate);

@@ -26,20 +26,17 @@ public class GUI {
     private String nickname;
 
     public GUI() {
-        // 프레임이 닫힐 때 프로그램도 종료하도록 설정
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // 레이아웃 설정
         frame.setLayout(new BoxLayout(frame.getContentPane(), BoxLayout.Y_AXIS));
         frame.setLocationRelativeTo(null);
-        // 닉네임 필드 추가
+
         JPanel nicknamePanel = new JPanel(new FlowLayout());
         nicknamePanel.add(new JLabel("Nickname:"));
         nicknameField = new JTextField(15); // 텍스트필드 길이 설정
         nicknamePanel.add(nicknameField);
         frame.add(nicknamePanel);
 
-        // 서버 IP 필드 추가
         JPanel serverIPPanel = new JPanel(new FlowLayout());
         serverIPPanel.add(new JLabel("Server IP:"));
         serverIPField = new JTextField("Localhost", 15); // 텍스트필드 길이 설정
@@ -47,17 +44,14 @@ public class GUI {
         frame.add(serverIPPanel);
         frame.add(confirmButton);
 
-        // 프레임 크기 설정 및 프레임 보이게 설정
         frame.pack();
         frame.setVisible(true);
     }
 
-    // 확인 버튼 클릭 시 실행되는 메소드
     public boolean onConfirm() {
         nickname = nicknameField.getText();
         String serverIP = serverIPField.getText();
 
-        // 닉네임과 서버 IP 확인
         if (nickname.isEmpty() || serverIP.isEmpty()) {
             JOptionPane.showMessageDialog(frame, "Nickname and server IP must be filled in.");
             return false;
@@ -84,12 +78,10 @@ public class GUI {
         return moneyLabel;
     }
 
-    // 채팅 창을 연다
     public void openChatWindow() {
         chatFrame = new JFrame();
         JPanel textAndButtonPanel = new JPanel(new FlowLayout());
 
-// Add components to the textAndButtonPanel
         textAndButtonPanel.add(new JLabel("소지금: "));
         textAndButtonPanel.add(moneyLabel);
         textAndButtonPanel.add(chatInput);
@@ -104,7 +96,6 @@ public class GUI {
         ChatList.setEditable(false);
         UserList.setEditable(false);
 
-// Add components to the main panel
         JPanel ClientGUIPanel = new JPanel();
         ClientGUIPanel.add(User);
         ClientGUIPanel.add(ChatList);
@@ -242,14 +233,10 @@ class GameGUI {
     public GameGUI() {
         frame = new JFrame("Poker Game");
 
-        // Set the layout
         frame.setLayout(new BorderLayout());
 
-        // Main Panel
         JPanel mainPanel = new JPanel(new BorderLayout());
 
-        // Add the components
-        // Top
         JPanel topPanel = new JPanel(new GridLayout(1, 3));
         JPanel rankPanel = new JPanel(new FlowLayout());
         JLabel label1 = new JLabel("현재 카드 족보:");
@@ -288,7 +275,6 @@ class GameGUI {
         topPanel.add(timePanel);
         mainPanel.add(topPanel, BorderLayout.NORTH);
 
-        // Center
         JPanel centerPanel = new JPanel(new GridLayout(3, 1));
         playerPanel = new JPanel(new FlowLayout());
         communityPanel = new JPanel(new FlowLayout());
@@ -298,7 +284,6 @@ class GameGUI {
         centerPanel.add(personalPanel);
         mainPanel.add(centerPanel, BorderLayout.CENTER);
 
-        // Bottom
         JPanel southPanel = new JPanel(new GridLayout(2,1));
         JPanel inputPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JPanel resultPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -321,16 +306,13 @@ class GameGUI {
         southPanel.add(inputPanel);
         mainPanel.add(southPanel, BorderLayout.SOUTH);
 
-        // Right Panel
         JPanel sidePanel = new JPanel(new GridLayout(2, 1));
         JPanel handRankingPanel = new JPanel();
         handRankingPanel.setLayout(new BoxLayout(handRankingPanel, BoxLayout.Y_AXIS));
 
-        // Add a title to the hand ranking panel.
         handRankingPanel.add(new JLabel("족보 순위"), BorderLayout.CENTER);
         handRankingPanel.add(Box.createVerticalStrut(10));
 
-        // Add each hand as a separate label to the panel.
         for (int i = 0; i < hands.length; i++) {
             JLabel handLabel = new JLabel(hands[i]);
             handLabel.setFont(new Font("맑은 고딕", Font.BOLD, 20));
@@ -341,24 +323,21 @@ class GameGUI {
         handRankingPanel.add(new JLabel("만약 마우스를 글자 위에 두면"));
         handRankingPanel.add(new JLabel("각 족보의 정보가 나타날 것입니다."));
 
-        // Add the hand ranking panel to the top of the side panel.
         sidePanel.add(handRankingPanel, BorderLayout.NORTH);
-        JPanel chatPanel = new JPanel(new BorderLayout()); // Here set layout to BorderLayout
+        JPanel chatPanel = new JPanel(new BorderLayout());
         chatPanel.add(new JLabel("                          미니 채팅창"), BorderLayout.NORTH);
         miniChatArea = new JTextArea(10, 30);
         miniChatField = new JTextField(30);
         miniChatArea.setEditable(false);
         JScrollPane scrollPane = new JScrollPane(miniChatArea);
-        chatPanel.add(scrollPane, BorderLayout.CENTER); // Here change to CENTER
+        chatPanel.add(scrollPane, BorderLayout.CENTER);
         chatPanel.add(miniChatField, BorderLayout.SOUTH);
         sidePanel.add(chatPanel);
         sidePanel.setBorder(BorderFactory.createMatteBorder(0, 3, 0, 0, Color.BLACK));
 
-        // Add Main Panel and Side Panel to frame
         frame.add(mainPanel, BorderLayout.CENTER);
         frame.add(sidePanel, BorderLayout.EAST);
 
-        // Set the frame properties
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(1400, 800);
         frame.setLocationRelativeTo(null);
